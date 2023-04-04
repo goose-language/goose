@@ -25,7 +25,7 @@ resolveImport name pos = do
     then throwError ("Could not find module " ++ name, pos)
     else return ()
 
-  content <- liftIO $ readFile name
+  content <- liftIO $ readFile path
   ast <- parseGoose name content
   case ast of
     Left err -> liftIO $ printParseError err name content >> exitFailure
