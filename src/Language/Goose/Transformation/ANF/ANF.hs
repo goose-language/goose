@@ -88,6 +88,10 @@ anfExpr (T.Lambda args (T.Return e)) = do
   (lets, e) <- anfExpr e
   n <- fresh
   return $ ([(n, A.ELambda (map C.annotedName args) (createLet lets ++ [A.SReturn e]))], A.EVariable n)
+anfExpr (T.Lambda args (T.Sequence exprs)) = do
+  (lets, exprs) <- unzip <$> mapM anfStmt exprs
+  n <- fresh
+  return $ ([(n, A.ELambda (map C.annotedName args) (createLet (concat lets) ++ concat exprs))], A.EVariable n)
 anfExpr (T.Lambda args body) = do
   (lets, e) <- anfExpr body
   n <- fresh
