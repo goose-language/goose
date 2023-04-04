@@ -16,7 +16,9 @@ Value* Regex_match(Value* args) {
   int len;
   int status = regcomp(&re, regex, REG_EXTENDED);
   if (status != 0) {
-    return boolean(0);
+    printf("Error compiling regex: %s\n", regex);
+    exit(1);
+    return emptyList();
   }
   status = regexec(&re, string_, 1, &match, 0);
   if (status != 0) {
@@ -28,11 +30,12 @@ Value* Regex_match(Value* args) {
   len = end-begin;
 
   word = malloc(sizeof(char) * (len + 1));
-
+  int j = 0;
   for (int i = begin; i < end; i++) {
-    word[i] = string_[i];
+    word[j] = string_[i];
+    j += 1;
   }
-  word[len + 1] = '\0';
+  word[len] = '\0';
   regfree(&re);
   return string(word);
 }
