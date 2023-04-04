@@ -23,5 +23,5 @@ build ast file libraries headers = do
   let output = file -<.> ".c"
   writeFile output $ unlines [generateHeaders headers, "#include <stdlib.h>", generate (compile ast)]
   compiler <- getCLangCompiler
-  callProcess compiler $ libraries ++ [output] ++ [ "-g"]
+  callProcess compiler $ libraries ++ [output] ++ ["-w", "-g"]
   
