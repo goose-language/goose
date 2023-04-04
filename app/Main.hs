@@ -42,7 +42,7 @@ main = do
                     Right ast' -> do
                       ast <- runANF ast'
                       ast <- return $ runClosureConversion ast
-                      ast <- runHoisting ast
+                      ast <- return $ runHoisting ast
                       let (libraries', headers) = unzip $ chunkBy2 libraries
                       build ast "main" (libraries' ++ includeLibrary) (includeHeaders ++ headers)
     _ -> putStrLn "Usage: goose <file> [libraries]"
