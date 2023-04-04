@@ -8,10 +8,10 @@ import Language.Goose.Transformation.Closure.Free (Free(free))
 import qualified Data.Set as S
 import qualified Data.Map as M
 import Language.Goose.Typecheck.Checker
-import Control.Monad.RWS
+import Control.Monad.State
 import Data.List (nub)
 
-type MonadClosure m = (MonadRWS () [ANFDefinition] (Int, S.Set String) m)
+type MonadClosure m = (MonadState (Int, S.Set String) m)
 
 fresh :: MonadClosure m => m Int
 fresh = do
@@ -114,7 +114,7 @@ convertExpression (EIf cond t f) = do
   return $ EIf cond' t' f'
 convertExpression (ELiteral x) = return $ ELiteral x
 convertExpression (EList xs) = EList <$> mapM convertExpression xs
-convertExpression ELambda {} = undefined
+convertExpression z@(ELambda {}) = closureConvert z ""
 convertExpression (EListAccess arr idx) = EListAccess <$> convertExpression arr <*> convertExpression idx
 convertExpression (EStructAccess str name) = EStructAccess <$> convertExpression str <*> pure name
 convertExpression (EStructure xs) = EStructure <$> mapM (mapM convertExpression) xs
@@ -126,6 +126,6 @@ convertExpression (EUpdate updated e) = EUpdate updated <$> convertExpression e
 runClosureConversion :: [ANFDefinition] -> [ANFDefinition]
 runClosureConversion xs = do
   let (res, _, _) = foldl (\(acc, i, excl) x -> do
-                          let (str, (_, excluded), e) = runRWS (convertToplevel x) () (i, excl)
-                          (acc ++ e ++ [str], i, excl `S.union` excluded)) ([], 0, S.fromList $ M.keys functions) xs
+                          let (str, (i', excluded)) = runState (convertToplevel x) (i, excl)
+                          (acc ++ ([str]), i', excl `S.union` excluded)) ([], 0, S.fromList $ M.keys functions) xs
   res
