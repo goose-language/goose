@@ -35,7 +35,7 @@ public module Array
   
   def push(arr, value) do
     arr = Array::concat(arr, [value])
-    return ()
+    return nil
   end
 
   def slice(array, idx) do
@@ -48,4 +48,50 @@ public module Array
     end
     return arr
   end
+
+  def startsWith(arr, prefix) do
+    if Array::length(arr) < Array::length(prefix) then return false
+    def i = 0
+    for item in prefix do
+      if item != arr[i] then return false
+      i = i + 1
+    end
+    return true
+  end
+
+  def sort(array, f) do
+    def arr = IO::clone(array)
+    def i = 0
+    def j = 0
+    def len = Array::length(arr)
+    while i < len do
+      j = i
+      while j > 0 do
+        if f(arr[j], arr[j - 1]) then do
+          def tmp = arr[j]
+          arr[j] = IO::clone(arr[j - 1])
+          arr[j - 1] = tmp
+        end
+        j = j - 1
+      end
+      i = i + 1
+    end
+    return arr
+  end
+
+  def reverse(arr) do
+    def i = 0
+    def j = Array::length(arr) - 1
+    def tmp = 0
+    while i < j do
+      tmp = arr[i]
+      arr[i] = arr[j]
+      arr[j] = tmp
+      i = i + 1
+      j = j - 1
+    end
+    return arr
+  end
+  
+  declare has[a](dict: a, key: string): bool
 end
