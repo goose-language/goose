@@ -79,7 +79,8 @@ convertExpression (EBinary op e1 e2) = EBinary op <$> convertExpression e1 <*> c
 convertExpression (EUnary op e) = EUnary op <$> convertExpression e
 convertExpression (EUpdate updated e) = EUpdate updated <$> convertExpression e
 
-runHoisting :: Monad m => [ANFDefinition] -> m [ANFDefinition]
+runHoisting :: [ANFDefinition] -> [ANFDefinition]
 runHoisting xs = do
-  let (xs', _, lambdas) = runRWS (mapM convertToplevel xs) () 0
-  return (lambdas ++ xs')
+  fst $ foldl (\(acc, i) x -> do
+    let (str, i', s) = runRWS (convertToplevel x) () i
+    (acc ++ (s ++ [str]), i')) ([], 0) xs
