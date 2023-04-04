@@ -49,8 +49,8 @@ compileExpression (EBinary op e1 e2) = case op of
   ">" -> IRApplication (IRVariable "gt") [compileExpression e1, compileExpression e2]
   "<=" -> IRApplication (IRVariable "lte") [compileExpression e1, compileExpression e2]
   ">=" -> IRApplication (IRVariable "gte") [compileExpression e1, compileExpression e2]
-  "&&" -> IRApplication (IRVariable "and") [compileExpression e1, compileExpression e2]
-  "||" -> IRApplication (IRVariable "or") [compileExpression e1, compileExpression e2]
+  "&&" -> IRApplication (IRVariable "and_") [compileExpression e1, compileExpression e2]
+  "||" -> IRApplication (IRVariable "or_") [compileExpression e1, compileExpression e2]
   _ -> error "Not implemented"
 compileExpression (EUnary op e) = IRUnary op (compileExpression e)
 compileExpression (EIf e t f) = IRTernary (compileExpression e) (compileExpression t) (fromMaybe (IRLiteral Unit) (fmap compileExpression f))
