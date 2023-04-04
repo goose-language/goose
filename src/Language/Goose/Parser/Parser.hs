@@ -125,7 +125,7 @@ parseLiteral = L.locate $ C.Literal <$> P.choice [
     C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
     C.Char <$> L.charLiteral,
     C.String <$> L.stringLiteral,
-    C.Unit <$ L.reserved "()"
+    C.Unit <$ L.reserved "nil"
   ]
 
 parseList :: Monad m => L.Goose m C.Expression

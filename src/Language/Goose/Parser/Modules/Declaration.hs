@@ -18,7 +18,8 @@ parsePrimitive = P.choice [
     L.reserved "float" F.$> D.Float,
     L.reserved "bool" F.$> D.Bool,
     L.reserved "char" F.$> D.Char,
-    L.reserved "nil" F.$> D.Unit
+    L.reserved "nil" F.$> D.Unit,
+    L.reserved "string" F.$> D.List D.Char
   ]
 
 parseList :: Monad m => L.Parser m D.Declaration
