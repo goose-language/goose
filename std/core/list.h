@@ -11,6 +11,7 @@ Value* push(Value* list, Value* value);
 
 // Dictionary functions
 Value* property_(Value* dict, char* key);
+Value* Array_has(Value* args);
 
 // Memory management functions
 Value* IO_clone(Value* value);

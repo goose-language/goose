@@ -3,6 +3,7 @@
 #include "list.h"
 #include "eq.h"
 #include "num.h"
+#include "conversion.h"
 
 Value* index_(Value *v, int i) {
   if (v->type == LIST) {
@@ -67,6 +68,22 @@ Value* property_(Value* dict, char* key) {
     }
   } else {
     return NULL;
+  }
+}
+
+Value* Array_has(Value* args) {
+  Value* dict = index_(args, 0);
+  Value* key = index_(args, 1);
+  if (dict->type == STRUCT) {
+    if (strcmp(dict->s.name, toString(key)) == 0) {
+      return boolean(1);
+    } else if (dict->s.next != NULL) {
+      return Array_has(list(dict->s.next, list(key, NULL)));
+    } else {
+      return boolean(0);
+    }
+  } else {
+    return boolean(0);
   }
 }
 
