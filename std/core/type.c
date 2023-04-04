@@ -17,9 +17,19 @@ Value* Type_of(Value* args) {
         return add(string("list<"), add(Type_of(list(value->l.value, NULL)), string(">")));
       }
       return string("list");
-    case UNIT: return string("unit");
+    case UNIT: return string("nil");
     case BOOL: return string("bool");
-    case STRUCT: return string("struct");
+    case STRUCT: {
+      Value *acc = string("structure<");
+      Value *current = value;
+      while (current != NULL) {
+        acc = add(acc, add(string(current->s.name), string(": ")));
+        acc = add(acc, current->s.next == NULL ? Type_of(list(current->s.value, NULL)) : add(Type_of(list(current->s.value, NULL)), string(", ")));
+        current = current->s.next;
+      }
+      acc = add(acc, string(">"));
+      return acc;
+    }
     default: return string("unknown");
   }
 }
