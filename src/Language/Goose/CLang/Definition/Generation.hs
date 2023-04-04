@@ -103,8 +103,9 @@ includeLibrary = do
   let rttiIO = "std/core/io.c"
   let rttiConv = "std/core/conversion.c"
   let rttiRegex = "std/core/regex.c"
+  let rttiType = "std/core/type.c"
   
-  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex]
+  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType]
 
 includeHeaders :: [String]
 includeHeaders = do
@@ -115,7 +116,9 @@ includeHeaders = do
   let rttiIO = "std/core/io.h"
   let rttiConv = "std/core/conversion.h"
   let rttiRegex = "std/core/regex.h"
-  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex]
+  let rttiType = "std/core/type.h"
+
+  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType]
 
 generateHeaders :: [String] -> String
 generateHeaders = unlines . map (\x -> "#include \"" ++ x ++ "\"")
