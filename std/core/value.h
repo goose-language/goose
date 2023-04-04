@@ -9,7 +9,6 @@
 #define BOOL 5
 #define STRUCT 6
 #define LAMBDA 7
-#define THUNK 8
 
 typedef struct _Value {
   int type;
@@ -28,7 +27,6 @@ typedef struct _Value {
     } s;
     int b;
     struct _Value* (*$$fun)(struct _Value*);
-    struct _Value* (*$$thunk)(void);
   };
 } Value;
 
