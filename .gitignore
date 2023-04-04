@@ -1,0 +1,7 @@
+a.out.*
+a.out
+*.prof
+main.c
+*.html
+.vscode
+dist-newstyle
