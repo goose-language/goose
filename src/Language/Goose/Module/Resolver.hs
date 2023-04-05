@@ -14,11 +14,11 @@ import Language.Goose.CLang.Definition.Generation
 
 type MonadResolver m = (MonadIO m, MonadError (String, Position) m)
 
-resolveImport :: MonadResolver m => String -> Position -> m [Located Toplevel]
-resolveImport name pos = do
+resolveImport :: MonadResolver m => String -> String -> Position -> m [Located Toplevel]
+resolveImport dir name pos = do
   let stdPath = getGoosePath
   let stdName = stdPath </> name
-  let path = if startsWith "std" name then stdName else name
+  let path = if startsWith "std" name then stdName else dir </> name
 
   fileExists <- liftIO $ doesFileExist path
   if not fileExists
@@ -29,7 +29,7 @@ resolveImport name pos = do
   ast <- parseGoose name content
   case ast of
     Left err -> liftIO $ printParseError err name content >> exitFailure
-    Right ast' -> resolveImports ast'
+    Right ast' -> resolveImports (takeDirectory path) ast'
 
 startsWith :: String -> String -> Bool
 startsWith [] _ = True
@@ -37,19 +37,19 @@ startsWith _ [] = False
 startsWith (x:xs) (y:ys) = x == y && startsWith xs ys
 
 -- | Resolve the imports of a module.
-resolveImports :: MonadResolver m => [Located Toplevel] -> m [Located Toplevel]
-resolveImports (Located pos (Import name) : toplevels) = do
-  resolved <- resolveImport name pos
-  rest <- resolveImports toplevels
+resolveImports :: MonadResolver m => String -> [Located Toplevel] -> m [Located Toplevel]
+resolveImports dir (Located pos (Import name) : toplevels) = do
+  resolved <- resolveImport dir name pos
+  rest <- resolveImports dir toplevels
   return $ (Namespace "_" resolved :>: pos) : rest 
-resolveImports (Located pos (ImportAs name alias) : toplevels) = do
-  resolved <- resolveImport name pos
-  rest <- resolveImports toplevels
+resolveImports dir (Located pos (ImportAs name alias) : toplevels) = do
+  resolved <- resolveImport dir name pos
+  rest <- resolveImports dir toplevels
   return $ (Namespace alias resolved :>: pos) : rest 
-resolveImports (toplevel : toplevels) = do
-  rest <- resolveImports toplevels
+resolveImports dir (toplevel : toplevels) = do
+  rest <- resolveImports dir toplevels
   return $ toplevel : rest
-resolveImports [] = return []
+resolveImports _ [] = return []
 
-runModuleResolver :: MonadIO m => [Located Toplevel] -> m (Either (String, Position) [Located Toplevel])
-runModuleResolver toplevels = runExceptT (resolveImports toplevels)
+runModuleResolver :: MonadIO m => String -> [Located Toplevel] -> m (Either (String, Position) [Located Toplevel])
+runModuleResolver dir toplevels = runExceptT (resolveImports (takeDirectory dir) toplevels)
