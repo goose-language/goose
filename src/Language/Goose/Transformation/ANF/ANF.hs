@@ -24,7 +24,7 @@ anfStmt :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], [A.ANFS
 anfStmt (T.Let (C.Annoted name _) expr body) = do
   (lets, expr) <- anfExpr expr
   (lets', expr') <- anfExpr body
-  return $ (lets ++ (name, expr) : lets', [A.SExpression expr'])
+  return $ (lets ++ (name, expr) : lets', if body == T.Literal C.Unit then [] else [A.SExpression expr'])
 anfStmt (T.Return expr) = do
   (lets, expr) <- anfExpr expr
   return $ (lets, [A.SReturn expr])
@@ -60,6 +60,11 @@ anfStmt e = do
 anfExpr :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], A.ANFExpression)
 anfExpr (T.Literal lit) = return ([], A.ELiteral lit)
 anfExpr (T.Variable name _) = return ([], A.EVariable name)
+anfExpr (T.Application z@(T.Application _ _) args') = do
+  n <- fresh
+  (lets, z) <- anfExpr z
+  (lets', args') <- unzip <$> mapM anfExpr args'
+  return $ (lets ++ [(n, z)] ++ concat lets', A.EApplication (A.EVariable n) args')
 anfExpr (T.Application func args) = do
   (lets, func) <- anfExpr func
   (lets', args) <- unzip <$> mapM anfExpr args
@@ -93,9 +98,13 @@ anfExpr (T.Lambda args (T.Sequence exprs)) = do
   n <- fresh
   return $ ([(n, A.ELambda (map C.annotedName args) (createLet (concat lets) ++ concat exprs))], A.EVariable n)
 anfExpr (T.Lambda args body) = do
-  (lets, e) <- anfExpr body
+  (lets, e) <- anfStmt body
   n <- fresh
-  return $ ([(n, A.ELambda (map C.annotedName args) (createLet lets ++ [A.SReturn e]))], A.EVariable n)
+  let e' = case last e of
+        A.SReturn _ -> e
+        A.SExpression e' -> createLet lets ++ init e ++ [A.SReturn e']
+        _ -> createLet lets ++ e
+  return $ ([(n, A.ELambda (map C.annotedName args) (createLet lets ++ e'))], A.EVariable n)
 anfExpr (T.List exprs) = do
   (lets, exprs) <- unzip <$> mapM anfExpr exprs
   return $ (concat lets, A.EList exprs)
