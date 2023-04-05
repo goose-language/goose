@@ -13,13 +13,18 @@ Value *add(Value *a, Value *b) {
     return floating(a->f + b->i);
   } else if (a->type == LIST && b->type == LIST) {
     Value *a0 = malloc(sizeof(Value));
-    memcpy(a0, a, sizeof(Value));
-    Value* tmp = a0;
-    while (tmp->l.next != NULL)
-    {
-      tmp = tmp->l.next;
+    if (a->l.value == NULL) {
+      memcpy(a0, b, sizeof(Value));
+      return a0;
+    } else {
+      memcpy(a0, a, sizeof(Value));
+      Value* tmp = a0;
+      while (tmp->l.next != NULL)
+      {
+        tmp = tmp->l.next;
+      }
+      tmp->l.next = b;
     }
-    tmp->l.next = b;
 
     return a0;
   } else if (a->type == UNIT && b->type == UNIT) {
