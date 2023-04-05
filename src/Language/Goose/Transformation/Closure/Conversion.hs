@@ -104,7 +104,10 @@ convertExpression (EApplication (EVariable x) args) = do
       let call = EApplication (EStructAccess (EStructAccess (EVariable x) "$$func") "$$fun") (EStructAccess (EVariable x) "env" : args')
       return call
     else EApplication <$> convertExpression (EVariable x) <*> mapM convertExpression args
-convertExpression (EApplication f args) = EApplication <$> convertExpression f <*> mapM convertExpression args
+convertExpression (EApplication f args) = do
+  f' <- convertExpression f
+  args' <- mapM convertExpression args
+  return $ EApplication (EStructAccess (EStructAccess f' "$$func") "$$fun") (EStructAccess f' "env" : args')
 convertExpression (EIf cond t f) = do
   cond' <- convertExpression cond
   t' <- convertExpression t
