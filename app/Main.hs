@@ -28,7 +28,7 @@ main = do
       case ast of
         Left err -> L.printParseError err file content
         Right ast' -> do
-          ast <- runModuleResolver ast'
+          ast <- runModuleResolver file ast'
           case ast of
             Left err -> L.printError (fst err, Nothing, snd err) "Module resolution"
             Right ast' -> do
