@@ -2,6 +2,33 @@
 #include "io.h"
 #include "list.h"
 #include <stdlib.h>
+#include <sys/stat.h> 
+#include <stdbool.h>
+#include <dirent.h>
+#include "conversion.h"
+
+Value* IO_fileExists (Value *filename) {
+  Value *v = index_(filename, 0);
+  char *filename_ = toString(v);
+  struct stat buffer;   
+  return boolean(stat(filename_, &buffer) == 0);
+}
+
+Value* IO_readDirectory(Value* args) {
+  Value *v = index_(args, 0);
+  char *filename_ = toString(v);
+  DIR *d;
+  struct dirent *dir;
+  d = opendir(filename_);
+  Value *result = emptyList();
+  if (d) {
+    while ((dir = readdir(d)) != NULL) {
+      result = push(result, string(dir->d_name));
+    }
+    closedir(d);
+  }
+  return result;
+}
 
 Value* IO_print(Value *args)
 {

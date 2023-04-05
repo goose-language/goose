@@ -10,6 +10,8 @@ public module IO
   declare readFile(filename: [char]): [char]
   declare writeFile(filename: [char], content: [char]): nil
   declare input([char]): [char]
+  declare fileExists(filename: [char]): bool
+  declare readDirectory(path: [char]): [[char]]
 
   def puts(input) do
     for i in input do
@@ -22,7 +24,7 @@ public module IO
     IO::print('\n')
   end
 
-  declare exit(code: int): nil
+  declare exit[a](code: int): a
 
   def throw(message) do
     IO::println(message)
