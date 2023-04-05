@@ -24,8 +24,8 @@ parseExpression :: Monad m => L.Goose m C.Expression
 parseExpression = E.buildExpressionParser table parseTerm
   where table = [
             [ E.Postfix $ makeUnaryOp postfix ],
-            logicalP,
             equalities,
+            logicalP,
             [ E.Infix (L.reservedOp "*" >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary "*" x y C.:>: (s, e))) E.AssocLeft,
               E.Infix (L.reservedOp "/" >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary "/" x y C.:>: (s, e))) E.AssocLeft],
             [ E.Infix (L.reservedOp "+" >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary "+" x y C.:>: (s, e))) E.AssocLeft,
@@ -52,19 +52,19 @@ parseExpression = E.buildExpressionParser table parseTerm
 
 parseTerm :: Monad m => L.Goose m C.Expression
 parseTerm = P.choice [
+    P.try parseFunction,
+    L.parens parseExpression,
     parseObject,
     parseUpdate,
     parseLiteral,
     parseVariable,
-    parseFunction,
     parseList,
     parseLet,
     parseIf,
     parseFor,
     parseWhile,
     parseSequence,
-    parseReturn,
-    L.parens parseExpression
+    parseReturn
   ]
 
 parseObject :: Monad m => L.Goose m C.Expression
@@ -142,8 +142,8 @@ parseWhile = L.locate $ do
 
 parseFunction :: Monad m => L.Goose m C.Expression
 parseFunction = L.locate $ do
+  L.reserved "fun"
   args <- L.parens $ L.commaSep L.identifier
-  L.reservedOp "->"
   body <- parseExpression
   return $ C.Lambda args body
 
