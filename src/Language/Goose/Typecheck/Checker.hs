@@ -141,13 +141,15 @@ inferExpression (C.Located pos (C.StructureAccess struct field)) = do
   (t, e') <- local' $ inferExpression struct
   unify (Field field tv t, pos)
   return (tv, A.StructureAccess e' field)
-inferExpression (C.Located _ (C.Lambda args body)) = do
+inferExpression (C.Located pos (C.Lambda args body)) = do
+  tv <- fresh
   tvs <- CM.replicateM (length args) fresh
   ret <- ST.gets returnType
-  ST.modify $ \s' -> s' { returnType = makeType tvs }
+  ST.modify $ \s' -> s' { returnType = tv }
   (t, e') <- withVariables (zip args (map (Forall []) tvs)) $ local' $ inferExpression body
+  unify (t :~: tv, pos)
   ST.modify $ \s' -> s' { returnType = ret }
-  return (tvs :-> t, A.Lambda (zipWith C.Annoted args tvs) e')
+  return (tvs :-> tv, A.Lambda (zipWith C.Annoted args tvs) e')
 inferExpression (C.Located pos _) = E.throwError ("Invalid expression", Nothing, pos)
 
 inferUpdate :: Infer C.Updated m A.Updated
