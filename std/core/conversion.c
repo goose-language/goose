@@ -23,7 +23,7 @@ int toBool(Value* value) {
 
 char* toString(Value* value) {
   int len = Array_length(list(value, NULL))->i;
-  char* result = malloc(sizeof(char) * len);
+  char* result = (char*) malloc(sizeof(char) * len);
   int i = 0;
   while (value != NULL && value->l.value != NULL) {
     result[i] = value->l.value->c;

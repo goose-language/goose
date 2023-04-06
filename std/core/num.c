@@ -12,7 +12,7 @@ Value *add(Value *a, Value *b) {
   } else if (a->type == FLOAT && b->type == INT) {
     return floating(a->f + b->i);
   } else if (a->type == LIST && b->type == LIST) {
-    Value *a0 = malloc(sizeof(Value));
+    Value *a0 = (Value*) malloc(sizeof(Value));
     if (a->l.value == NULL) {
       memcpy(a0, b, sizeof(Value));
       return a0;

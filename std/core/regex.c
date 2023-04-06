@@ -29,7 +29,7 @@ Value* Regex_match(Value* args) {
   end = (int)match.rm_eo;
   len = end-begin;
 
-  word = malloc(sizeof(char) * (len + 1));
+  word = (char*) malloc(sizeof(char) * (len + 1));
   int j = 0;
   for (int i = begin; i < end; i++) {
     word[j] = string_[i];
@@ -41,8 +41,8 @@ Value* Regex_match(Value* args) {
 }
 
 Value* Regex_test(Value* args) {
-  Value* string_ = toString(index_(args, 0));
-  Value* regex = toString(index_(args, 1));
+  char* string_ = toString(index_(args, 0));
+  char* regex = toString(index_(args, 1));
   regex_t re;
   regmatch_t match;
   int status = regcomp(&re, regex, REG_EXTENDED);

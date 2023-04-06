@@ -90,7 +90,7 @@ Value* Array_has(Value* args) {
 Value* IO_clone(Value *args)
 {
   Value *v = index_(args, 0);
-  Value *c = malloc(sizeof(Value));
+  Value *c = (Value*) malloc(sizeof(Value));
   if (v == NULL)
   {
     return NULL;

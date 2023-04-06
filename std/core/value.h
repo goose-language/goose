@@ -10,23 +10,27 @@
 #define STRUCT 6
 #define LAMBDA 7
 
+struct Struct {
+  char* name;
+  struct _Value* value;
+  struct _Value* next;
+};
+
+struct List {
+  struct _Value* value;
+  struct _Value* next;
+};
+
 typedef struct _Value {
   int type;
   union {
     long long int i;
     float f;
     char c;
-    struct List {
-      struct _Value* value;
-      struct _Value* next;
-    } l;
-    struct Struct {
-      char* name;
-      struct _Value* value;
-      struct _Value* next;
-    } s;
+    struct List l;
+    struct Struct s;
     int b;
-    struct _Value* (*$$fun)(struct _Value*);
+    struct _Value* (*$$fun)(struct _Value* args);
   };
 } Value;
 
@@ -37,7 +41,7 @@ Value* list(Value* value, Value* next);
 Value* unit(void);
 Value* boolean(int value);
 Value* structure(char* name, Value* value, Value* next);
-Value* makeLambda(Value* (*f)(Value*));
+Value* makeLambda(Value* (*f)(Value* args));
 Value* string(char* value);
 Value* emptyList();
 
