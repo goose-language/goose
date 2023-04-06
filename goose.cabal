@@ -87,6 +87,7 @@ library
             Language.Goose.Typecheck.Definition.AST
             Language.Goose.Typecheck.Definition.Monad
             Language.Goose.Typecheck.Definition.Type
+            Language.Goose.Typecheck.Definition.Free
 
         
         Language.Goose.Transformation.ANF.ANF
@@ -97,6 +98,7 @@ library
         Language.Goose.Transformation.Closure.Conversion
         Language.Goose.Transformation.Closure.Hoisting
 
+        Language.Goose.Transformation.EtaExpansion
         Language.Goose.Transformation.Garbage.Collector
 
         Language.Goose.CLang.Compiler
