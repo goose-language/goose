@@ -91,20 +91,17 @@ anfExpr (T.If cond then' else') = do
   return $ (lets ++ lets' ++ lets'', A.EIf cond then' else')
 anfExpr (T.Lambda args (T.Return e)) = do
   (lets, e) <- anfExpr e
-  n <- fresh
-  return $ ([(n, A.ELambda (map C.annotedName args) (createLet lets ++ [A.SReturn e]))], A.EVariable n)
+  return $ ([], A.ELambda (map C.annotedName args) (createLet lets ++ [A.SReturn e]))
 anfExpr (T.Lambda args (T.Sequence exprs)) = do
   (lets, exprs) <- unzip <$> mapM anfStmt exprs
-  n <- fresh
-  return $ ([(n, A.ELambda (map C.annotedName args) (createLet (concat lets) ++ concat exprs))], A.EVariable n)
+  return $ ([], A.ELambda (map C.annotedName args) (createLet (concat lets) ++ concat exprs))
 anfExpr (T.Lambda args body) = do
   (lets, e) <- anfStmt body
-  n <- fresh
   let e' = case last e of
-        A.SReturn _ -> e
+        A.SReturn _ -> createLet lets ++ e
         A.SExpression e' -> createLet lets ++ init e ++ [A.SReturn e']
         _ -> createLet lets ++ e
-  return $ ([(n, A.ELambda (map C.annotedName args) (createLet lets ++ e'))], A.EVariable n)
+  return $ ([], A.ELambda (map C.annotedName args) e')
 anfExpr (T.List exprs) = do
   (lets, exprs) <- unzip <$> mapM anfExpr exprs
   return $ (concat lets, A.EList exprs)

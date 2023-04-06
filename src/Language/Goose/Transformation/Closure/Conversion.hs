@@ -10,6 +10,7 @@ import qualified Data.Map as M
 import Language.Goose.Typecheck.Checker
 import Control.Monad.State
 import Data.List (nub)
+import qualified Language.Goose.CST.Literal as C
 
 type MonadClosure m = (MonadState (Int, S.Set String) m)
 
@@ -54,24 +55,31 @@ convertToplevel x = return x
 closureConvert :: MonadClosure m => ANFExpression -> String -> m ANFExpression
 closureConvert z@(ELambda args expr) name = do
   excluded <- gets snd
-  let env = S.filter (`notElem` excluded) $ free z S.\\ S.singleton name
+  let freed = if not (null name) then free z `S.union` S.singleton name else free z 
+  let env = S.filter (`notElem` excluded) freed
   let declarations = nub $ map (\(n) -> SLet n (EStructAccess (EVariable "env") n)) $ S.toList env
+
   expr' <- mapM convertStatement expr
   let body = case expr' of
                 stmts -> declarations ++ concat stmts
-  let envStruct = EStructure $ map (\n -> (n, EVariable n)) $ S.toList env
 
-  return $ EStructure [("env", envStruct), ("$$func", EApplication (EVariable "makeLambda") [ELambda ("env": args) body])]
+  let envStruct = map (\n -> if n == name then (n, EStructure [("$$func", ELiteral C.Unit), ("env", ELiteral C.Unit)]) else (n, EVariable n)) $ S.toList env
+
+  return $ EStructure [("$$func", EApplication (EVariable "makeLambda") [ELambda ("env": args) body]), ("env", EStructure $ envStruct)]
 closureConvert _ _ = undefined
 
 convertStatement :: MonadClosure m => ANFStatement -> m [ANFStatement]
 convertStatement (SExpression e) = (:[]) . SExpression <$> convertExpression e
 convertStatement (SLet name z@ELambda {}) = do
   expr' <- closureConvert z name
-  return $ [SLet name expr']
+  if name `S.member` free z
+    then return $ [SLet name expr', SUpdate (UStructAccess (UStructAccess (UVariable name) "env") name) (EVariable name)] 
+    else return $ [SLet name expr']
 convertStatement (SLet name e) = do
   expr' <- convertExpression e
-  return $ [SLet name expr']
+  if name `S.member` free e 
+    then return $ [SLet name expr', SUpdate (UStructAccess (UStructAccess (UVariable name) "env") name) (EVariable name)] 
+    else return $ [SLet name expr']
 convertStatement (SIf cond t f) = do
   cond' <- convertExpression cond
   t' <- concat <$> mapM convertStatement t
@@ -97,17 +105,17 @@ convertStatement (SContinue) = return [SContinue]
 
 convertExpression :: MonadClosure m => ANFExpression -> m ANFExpression
 convertExpression (EApplication (EVariable x) args) = do
-  b <- isExcluded x
-  if not b
+  excluded <- isExcluded x
+  if not excluded
     then do
       args' <- mapM convertExpression args
       let call = EApplication (EStructAccess (EStructAccess (EVariable x) "$$func") "$$fun") (EStructAccess (EVariable x) "env" : args')
       return call
-    else EApplication <$> convertExpression (EVariable x) <*> mapM convertExpression args
+    else EApplication (EVariable x) <$> mapM convertExpression args
 convertExpression (EApplication f args) = do
   f' <- convertExpression f
   args' <- mapM convertExpression args
-  return $ EApplication (EStructAccess (EStructAccess f' "$$func") "$$fun") (EStructAccess f' "env" : args')
+  return $ EApplication (EStructAccess f' "$$fun") args'
 convertExpression (EIf cond t f) = do
   cond' <- convertExpression cond
   t' <- convertExpression t
@@ -121,7 +129,11 @@ convertExpression z@(ELambda {}) = closureConvert z ""
 convertExpression (EListAccess arr idx) = EListAccess <$> convertExpression arr <*> convertExpression idx
 convertExpression (EStructAccess str name) = EStructAccess <$> convertExpression str <*> pure name
 convertExpression (EStructure xs) = EStructure <$> mapM (mapM convertExpression) xs
-convertExpression (EVariable x) = return $ EVariable x
+convertExpression (EVariable x) = do
+  b <- isExcluded x
+  if b
+    then return $ EVariable x
+    else return $ EVariable x
 convertExpression (EBinary op e1 e2) = EBinary op <$> convertExpression e1 <*> convertExpression e2
 convertExpression (EUnary op e) = EUnary op <$> convertExpression e
 convertExpression (EUpdate updated e) = EUpdate updated <$> convertExpression e
