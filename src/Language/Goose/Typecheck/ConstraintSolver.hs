@@ -6,16 +6,12 @@ import Language.Goose.Typecheck.Modules.Apply
 import Language.Goose.Typecheck.Modules.Unification
 import Language.Goose.Typecheck.Definition.Type
 
-import Debug.Trace
-
 import qualified Control.Monad.Except as E
 import qualified Data.Bifunctor as BF
 
 solve :: MonadChecker m => [Constraint] -> m Substitution
 solve [] = return mempty
 solve ((t1 :~: t2, pos):xs) = do
-  -- traceShowM (t1, t2)
-  -- traceShowM $ take 6 xs
   s1 <- mgu t1 t2
   case s1 of
     Left err -> E.throwError (err, Nothing, pos)
