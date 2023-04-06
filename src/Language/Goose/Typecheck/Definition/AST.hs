@@ -138,7 +138,7 @@ instance Show Expression where
   show (Lambda xs e) = "fun(" ++ unwords (map show xs) ++ ") " ++ show e
   show (Let (x :@ t) e1 e2) = "let " ++ x ++ ": " ++ show t ++ " = " ++ show e1 ++ " in " ++ show e2
   show (Match e ps) = "match " ++ show e ++ " { " ++ unwords (map (\(p, e') -> show p ++ " = " ++ show e') ps) ++ " }"
-  show (Sequence es) = "{" ++ unwords (map show es) ++ "}"
+  show (Sequence es) = "\n{" ++ unlines (map (("  "++) . show) es) ++ "}"
   show (List es) = "[" ++ unwords (map show es) ++ "]"
   show (ListAccess e1 e2) = show e1 ++ "[" ++ show e2 ++ "]"
   show (While e1 e2) = "while " ++ show e1 ++ " " ++ show e2
