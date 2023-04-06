@@ -8,8 +8,10 @@ import Language.Goose.Typecheck.Checker
 import Language.Goose.Transformation.ANF.ANF
 import Language.Goose.Transformation.Closure.Conversion
 import Language.Goose.Transformation.Closure.Hoisting
+import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.CLang.Build
 import Language.Goose.CLang.Definition.Generation
+import Language.Goose.Typecheck.Modules.Substitution
 import System.Environment
 
 import qualified Log.Error as L
@@ -40,7 +42,8 @@ main = do
                   case ast of
                     Left err -> L.printError err "Type inference"
                     Right ast' -> do
-                      ast <- runANF ast'
+                      ast <- return $ runEtaExpansion ast'
+                      ast <- runANF ast
                       ast <- return $ runClosureConversion ast
                       ast <- return $ runHoisting ast
                       let (libraries', headers) = unzip $ chunkBy2 libraries
