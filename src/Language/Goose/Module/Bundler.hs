@@ -165,8 +165,8 @@ resolveImportedExpressions (ListAccess arr index :>: pos) = do
   index' <- resolveImportedExpressions index
   return $ ListAccess arr' index' :>: pos
 resolveImportedExpressions (Let n expr body :>: pos) = do
-  expr' <- resolveImportedExpressions expr
   ST.modify (\s -> s { mappings = M.insert n n (mappings s) })
+  expr' <- resolveImportedExpressions expr
   body' <- resolveImportedExpressions body
   return $ Let n expr' body' :>: pos
 resolveImportedExpressions (Dereference e :>: pos) = do
