@@ -18,7 +18,11 @@ data ConstraintConstructor
   | Field {- named -} String {- of -} Type {- in -} Type
 type Constraint = (ConstraintConstructor, Position)
 
-instance Show ConstraintConstructor where
+instance {-# OVERLAPPING #-} Types Constraint where
+  free (c, _) = free c
+  apply s (c, pos) = (apply s c, pos)
+
+instance Show ConstraintConstructor where 
   show (t1 :~: t2) = show t1 ++ " ~ " ++ show t2
   show (Field f t1 t2) = show t1 ++ "." ++ f ++ " ~ " ++ show t2
 
