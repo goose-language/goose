@@ -21,7 +21,7 @@ varify n = if n `elem` reservedWords then n ++ "_" else n
 
 instance Generation IRToplevel where
   generate (IRFunction name args body) = 
-    rttiName ++ "* " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
+    (if name == "main" then "int " else rttiName ++ "* ") ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
   generate (IRDeclaration name e) = rttiName ++ "* " ++ (varify name) ++ " = " ++ generate e ++ ";"
   generate (IRExtern name _) = "extern " ++ rttiName ++ "* " ++ name ++ ";"
   generate (IRStruct name fields) = "struct " ++ (varify name) ++ " { " ++ unwords (map generate fields) ++ " };"
@@ -45,6 +45,7 @@ instance Generation IRStatement where
   generate (IRBlock s) = "{" ++ unlines (map generate s) ++ "}"
   generate IRBreak = "break;"
   generate IRContinue = "continue;"
+  generate (IRDeclarationStatement name e@(IRDictAccess _ "$$fun")) = rttiName ++ "* (*" ++ (varify name) ++ ")(Value*) = " ++ generate e ++ ";"
   generate (IRDeclarationStatement name e) = rttiName ++ "* " ++ (varify name) ++ " = " ++ generate e ++ ";"
   generate (IRUpdate e1 e2) = "update(" ++ generate e1 ++ ", " ++ generate e2 ++ ");"
 
@@ -122,3 +123,9 @@ includeHeaders = do
 
 generateHeaders :: [String] -> String
 generateHeaders = unlines . map (\x -> "#include \"" ++ x ++ "\"")
+
+getAllFunctions :: [IRToplevel] -> [String]
+getAllFunctions = nub . concatMap go
+  where go :: IRToplevel -> [String]
+        go (IRFunction name _ _) = [name]
+        go _ = []
