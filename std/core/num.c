@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include "num.h"
+#include "error.h"
+#include "type.h"
 
 Value *add(Value *a, Value *b) {
   if (a->type == INT && b->type == INT) {
@@ -30,7 +32,7 @@ Value *add(Value *a, Value *b) {
   } else if (a->type == UNIT && b->type == UNIT) {
     return unit();
   } else {
-    return NULL;
+    throwError("Cannot add values of different types");
   }  
 }
 
@@ -45,8 +47,10 @@ Value* sub(Value* a, Value* b) {
     return floating(a->f - b->i);
   } else if (a->type == UNIT && b->type == UNIT) {
     return unit();
+  } else if (a == NULL || b == NULL) {
+    throwError("Cannot subtract NULL");
   } else {
-    return NULL;
+    return a;
   }
 }
 
@@ -61,8 +65,10 @@ Value* mul(Value* a, Value* b) {
     return floating(a->f * b->i);
   } else if (a->type == UNIT && b->type == UNIT) {
     return unit();
+  } else if (a == NULL || b == NULL) {
+    throwError("Cannot multiply NULL");
   } else {
-    return NULL;
+    return a;
   }
 }
 
@@ -77,7 +83,9 @@ Value* div_(Value* a, Value* b) {
     return floating(a->f / b->i);
   } else if (a->type == UNIT && b->type == UNIT) {
     return unit();
+  } else if (a == NULL || b == NULL) {
+    throwError("Cannot divide NULL");
   } else {
-    return NULL;
+    return a;
   }
 }

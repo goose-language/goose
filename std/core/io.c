@@ -6,9 +6,12 @@
 #include <stdbool.h>
 #include <dirent.h>
 #include "conversion.h"
+#include "error.h"
 
 Value* IO_fileExists (Value *filename) {
   Value *v = index_(filename, 0);
+  if (v == NULL) throwError("IO::fileExists: expected 1 argument, got 0");
+  
   char *filename_ = toString(v);
   struct stat buffer;   
   return boolean(stat(filename_, &buffer) == 0);
@@ -16,6 +19,8 @@ Value* IO_fileExists (Value *filename) {
 
 Value* IO_readDirectory(Value* args) {
   Value *v = index_(args, 0);
+  if (v == NULL) throwError("IO::readDirectory: expected 1 argument, got 0");
+
   char *filename_ = toString(v);
   DIR *d;
   struct dirent *dir;
@@ -33,6 +38,8 @@ Value* IO_readDirectory(Value* args) {
 Value* IO_print(Value *args)
 {
   Value *v = index_(args, 0);
+  if (v == NULL) throwError("IO::print: expected 1 argument, got 0");
+
   switch (v->type)
   {
   case LAMBDA:
@@ -105,7 +112,9 @@ Value* IO_print(Value *args)
 }
 
 void update(Value* v, Value* value) {
-  if (v == NULL) return;
+  if (v == NULL) throwError("expected variable, got NULL");
+  if (value == NULL) throwError("expected value, got NULL");
+
   switch (v->type) {
     case INT:
       v->i = value->i;
@@ -134,7 +143,7 @@ void update(Value* v, Value* value) {
 }
 
 void freeValue(Value* v) {
-  if (v == NULL) return;
+  if (v == NULL) throwError("expected value, got NULL");
   switch (v->type) {
     case INT:
       break;
@@ -169,6 +178,8 @@ void IO_exit(Value* args) {
 }
 Value* IO_readFile(Value* args) {
   Value* path = index_(args, 0);
+  if (path == NULL) throwError("IO::readFile: expected 1 argument, got 0");
+
   Value* result = emptyList();
   FILE* file = fopen(toString(path), "r");
   char c;
@@ -185,7 +196,11 @@ Value* IO_readFile(Value* args) {
 
 Value* IO_writeFile(Value* args) {
   Value* path = index_(args, 0);
+  if (path == NULL) throwError("IO::writeFile: expected 2 arguments, got 0");
+
   Value* content = index_(args, 1);
+  if (path == NULL) throwError("IO::writeFile: expected 2 arguments, got 1");
+
   FILE* file = fopen(toString(path), "w");
   fputs(toString(content), file);
   fclose(file);
@@ -194,6 +209,8 @@ Value* IO_writeFile(Value* args) {
 
 Value* IO_input(Value* args) {
   Value* prompt = index_(args, 0);
+  if (prompt == NULL) throwError("IO::input: expected 1 argument, got 0");
+
   printf("%s", toString(prompt));
   char* buffer;
   scanf("%s", buffer);

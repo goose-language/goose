@@ -4,6 +4,7 @@
 #include "eq.h"
 #include "num.h"
 #include "conversion.h"
+#include "type.h"
 
 Value* index_(Value *v, int i) {
   if (v->type == LIST) {
@@ -16,9 +17,9 @@ Value* index_(Value *v, int i) {
         v = v->l.next;
       }
     }
-    return NULL;
+    throwError("index out of bounds");
   } else {
-    return NULL;
+    throwError("expected list, got %s", Type_of(list(v, NULL)));
   }
 }
 
@@ -40,7 +41,7 @@ Value* Array_next(Value*args) {
   if (array->type == LIST) {
     return array->l.next;
   } else {
-    return NULL;
+    throwError("Array::next: expected array, got %s", Type_of(list(array, NULL)));
   }
 }
 
@@ -54,12 +55,11 @@ Value* Array_length(Value* args) {
     } else {
       return add(integer(1), Array_length(list(array->l.next, NULL)));
     }
-  } else {
-    return NULL;
-  }
+  } else throwError("Array::length: expected array, got %s", Type_of(list(array, NULL)));
 }
 
 Value* property_(Value* dict, char* key) {
+  if (dict == NULL) throwError("cannot access structure property of NULL");
   if (dict->type == STRUCT) {
     if (strcmp(dict->s.name, key) == 0) {
       return dict->s.value;
@@ -73,7 +73,11 @@ Value* property_(Value* dict, char* key) {
 
 Value* Array_has(Value* args) {
   Value* dict = index_(args, 0);
+  if (dict == NULL) throwError("Array::has: expected 2 arguments, got 0");
+
   Value* key = index_(args, 1);
+  if (dict == NULL) throwError("Array::has: expected 2 arguments, got 1");
+
   if (dict->type == STRUCT) {
     if (strcmp(dict->s.name, toString(key)) == 0) {
       return boolean(1);
@@ -90,6 +94,7 @@ Value* Array_has(Value* args) {
 Value* IO_clone(Value *args)
 {
   Value *v = index_(args, 0);
+  
   Value *c = (Value*) malloc(sizeof(Value));
   if (v == NULL)
   {
