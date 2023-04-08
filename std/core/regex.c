@@ -5,8 +5,9 @@
 #include <stdio.h>
 #include "list.h"
 #include "io.h"
+#include "error.h"
 
-Value* Regex_match(Value* args) {
+Value* Regex_get(Value* args) {
   int begin; int end;
   char* string_ = toString(index_(args, 0));
   char* regex = toString(index_(args, 1));
@@ -16,9 +17,7 @@ Value* Regex_match(Value* args) {
   int len;
   int status = regcomp(&re, regex, REG_EXTENDED);
   if (status != 0) {
-    printf("Error compiling regex: %s\n", regex);
-    exit(1);
-    return emptyList();
+    throwError("Regex::get: invalid regex");
   }
   status = regexec(&re, string_, 1, &match, 0);
   if (status != 0) {
