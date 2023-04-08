@@ -122,6 +122,7 @@ library
       , process
       , directory
       , filepath
+      , MissingH
 
     -- Directories containing source files.
     hs-source-dirs:   src
