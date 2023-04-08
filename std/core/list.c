@@ -27,8 +27,6 @@ Value* push(Value* lst, Value* value) {
   Value* result = lst;
   if (result == NULL) {
     result = list(value, NULL);
-  } else if (eq(result, emptyList())) {
-    result = list(value, NULL);
   } else {
     while (result->l.next != NULL) {
       result = result->l.next;
