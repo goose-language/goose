@@ -54,6 +54,10 @@ convertStatement (SFor name list body) = do
 convertStatement (SBreak) = return SBreak
 convertStatement (SContinue) = return SContinue
 convertStatement (SBlock _) = error "Should not encounter blocks during hoisting"
+convertStatement (SMatch expr cases) = do
+  expr' <- convertExpression expr
+  cases' <- mapM (\(p, b) -> (,) p <$> mapM convertStatement b) cases
+  return $ SMatch expr' cases'
 
 convertExpression :: MonadHoist m => ANFExpression -> m ANFExpression
 convertExpression (EApplication f args) = EApplication <$> convertExpression f <*> mapM convertExpression args

@@ -102,6 +102,10 @@ convertStatement (SFor name list body) = do
 convertStatement (SBlock xs) = concat <$> mapM convertStatement xs
 convertStatement (SBreak) = return [SBreak]
 convertStatement (SContinue) = return [SContinue]
+convertStatement (SMatch e cases) = do
+  e' <- convertExpression e
+  cases' <- mapM (\(p, b) -> (,) p <$> concat <$> mapM convertStatement b) cases
+  return $ [SMatch e' cases']
 
 convertExpression :: MonadClosure m => ANFExpression -> m ANFExpression
 convertExpression (EApplication (EVariable x) args) = do
@@ -115,7 +119,7 @@ convertExpression (EApplication (EVariable x) args) = do
 convertExpression (EApplication f args) = do
   f' <- convertExpression f
   args' <- mapM convertExpression args
-  return $ EApplication (EStructAccess f' "$$fun") args'
+  return $ EApplication (EStructAccess (EStructAccess f' "$$func") "$$fun") args'
 convertExpression (EIf cond t f) = do
   cond' <- convertExpression cond
   t' <- convertExpression t

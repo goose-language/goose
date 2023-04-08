@@ -2,6 +2,7 @@ module Language.Goose.Transformation.ANF.AST where
 import Language.Goose.CST.Literal ( Literal )
 import Language.Goose.CST.Annoted ( Annoted )
 import Language.Goose.Typecheck.Definition.Type
+import qualified Language.Goose.Typecheck.Definition.AST as A
 import Data.List
 
 data ANFUpdated 
@@ -55,6 +56,7 @@ data ANFStatement
   | SBreak
   | SUpdate ANFUpdated ANFExpression
   | SContinue
+  | SMatch ANFExpression [(A.Pattern, [ANFStatement])]
   deriving Eq
 
 instance Show ANFStatement where
@@ -68,6 +70,7 @@ instance Show ANFStatement where
   show (SBreak) = "break"
   show (SUpdate updated expr) = show updated ++ " = " ++ show expr
   show (SContinue) = "continue"
+  show (SMatch expr cases) = "match " ++ show expr ++ " with " ++ intercalate " | " (map (\(e, b) -> show e ++ " -> " ++ show b) cases)
 
 data ANFDefinition
   = DFunction String [String] [ANFStatement]

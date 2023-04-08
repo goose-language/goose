@@ -3,8 +3,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 module Language.Goose.Transformation.Closure.Free where
 import Language.Goose.Transformation.ANF.AST
+import qualified Language.Goose.Typecheck.Definition.AST as T
 import qualified Data.Set as S
-
 
 class Free a where
   free :: a -> S.Set String
@@ -46,6 +46,15 @@ instance Free ANFStatement where
   free (SReturn e) = free e
   free SBreak = S.empty
   free SContinue = S.empty
+  free (SMatch e cases) = free e `S.union` S.unions (map (\(p, b) -> free b S.\\ free p) cases)
+
+instance Free T.Pattern where
+  free (T.PVariable x _) = S.singleton x
+  free (T.PList xs) = free xs
+  free (T.PStructure xs) = free xs
+  free (T.PWildcard) = S.empty
+  free (T.PConstructor name pats) = free pats `S.union` S.singleton name
+  free (T.PLiteral _) = S.empty
 
 instance Free ANFDefinition where
   free (DDeclaration x e) = free e S.\\ S.singleton x

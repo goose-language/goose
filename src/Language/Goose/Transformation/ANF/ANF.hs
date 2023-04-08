@@ -52,10 +52,15 @@ anfStmt (T.Update name expr) = do
 anfStmt (T.Sequence exprs) = do
   (lets, exprs) <- unzip <$> mapM anfStmt exprs
   return $ ([], concat $ zipWith (\let' expr -> createLet let' ++ expr) lets exprs)
+anfStmt (T.Match expr cases) = do
+  (lets, expr) <- anfExpr expr
+  (lets', cases) <- unzip <$> mapM (\(pattern, body) -> do
+    (lets, body) <- anfStmt body
+    return (lets, (pattern, body))) cases
+  return $ (lets ++ concat lets', [A.SMatch expr cases])
 anfStmt e = do
   (lets, e) <- anfExpr e
   return $ (lets, [A.SExpression e])
-  
 
 anfExpr :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], A.ANFExpression)
 anfExpr (T.Literal lit) = return ([], A.ELiteral lit)
@@ -121,6 +126,12 @@ anfExpr (T.Structure fields) = do
 anfExpr (T.StructureAccess struct field) = do
   (lets, struct) <- anfExpr struct
   return $ (lets, A.EStructAccess struct field)
+anfExpr (T.Match expr cases) = do
+  (lets, expr) <- anfExpr expr
+  (lets', cases) <- unzip <$> mapM (\(pattern, body) -> do
+    (lets, body) <- anfStmt body
+    return (lets, (pattern, body))) cases
+  return $ (lets ++ concat lets', embed $ createLet (concat lets') ++ [A.SMatch expr cases])
 anfExpr x = error $ "Not implemented: " ++ show x
 
 anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFUpdated)
