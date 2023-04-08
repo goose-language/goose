@@ -25,7 +25,11 @@ data Declaration
   -- | A list type, used to represent a type constructor
   -- | Of the form: [α]
   | List Declaration
-  
+
+  -- | A function type, used to represent a type constructor
+  -- | Of the form: fun(α, β): γ
+  | Function [Declaration] Declaration
+
   -- | Some basic primitive types
   | Int | Float | Bool | Char | Unit
   deriving Eq
@@ -40,3 +44,5 @@ instance Show Declaration where
   show Unit = "()"
   show (Generic x) = x
   show (Constructor x xs) = show x ++ "[" ++ intercalate ", " (map show xs) ++ "]"
+  show (Function xs x) = "fun(" ++ intercalate ", " (map show xs) ++ "): " ++ show x
+  
