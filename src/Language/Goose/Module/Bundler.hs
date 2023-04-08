@@ -3,6 +3,7 @@
 module Language.Goose.Module.Bundler where
 import Language.Goose.Module.Monad
 import Language.Goose.CST.Expression
+import Language.Goose.CST.Modules.Pattern
 import Language.Goose.CST.Located
 
 import qualified Control.Monad.Except as E
@@ -190,9 +191,6 @@ resolveImportedExpressions (Let (C.Annoted n t) expr body :>: pos) = do
   expr' <- resolveImportedExpressions expr
   body' <- resolveImportedExpressions body
   return $ Let (C.Annoted n t) expr' body' :>: pos
-resolveImportedExpressions (Dereference e :>: pos) = do
-  e' <- resolveImportedExpressions e
-  return $ Dereference e' :>: pos
 resolveImportedExpressions (While cond body :>: pos) = do
   cond' <- resolveImportedExpressions cond
   body' <- mapM resolveImportedExpressions body
@@ -220,8 +218,43 @@ resolveImportedExpressions (Structure fields :>: pos) = do
 resolveImportedExpressions (StructureAccess expr name :>: pos) = do
   expr' <- resolveImportedExpressions expr
   return $ StructureAccess expr' name :>: pos
+resolveImportedExpressions (Match expr cases :>: pos) = do
+  expr' <- resolveImportedExpressions expr
+  cases' <- mapM (\(Located pos pattern, expr) -> do
+    pattern' <- resolveImportedPattern pattern >>= return . (:>: pos)
+    expr' <- resolveImportedExpressions expr
+    return (pattern', expr')) cases
+  return $ Match expr' cases' :>: pos
 resolveImportedExpressions (Located pos _) = E.throwError ("Not implemented", pos)
 
+resolveImportedPattern :: MonadBundling m => Pattern -> m Pattern
+resolveImportedPattern (VariablePattern name) = do
+  mappings' <- ST.gets mappings
+  case M.lookup (makeName name) mappings' of
+    Just name' -> return $ VariablePattern (D.Simple name')
+    Nothing -> do
+      ST.modify (\s -> s { mappings = M.insert (makeName name) (makeName name) (mappings s) })
+      return $ VariablePattern name
+resolveImportedPattern (ListPattern names) = do
+  names' <- mapM (\(Located pos n) -> do
+    n' <- resolveImportedPattern n
+    return $ n' :>: pos) names
+  return $ ListPattern names'
+resolveImportedPattern (StructurePattern fields) = do
+  fields' <- mapM (\(name, Located pos expr) -> do
+    expr' <- resolveImportedPattern expr
+    return $ (name, expr' :>: pos)) fields
+  return $ StructurePattern fields'
+resolveImportedPattern (LiteralPattern l) = return $ LiteralPattern l
+resolveImportedPattern (WildcardPattern) = return $ WildcardPattern
+resolveImportedPattern (ConstructorPattern name pats) = do
+  mappings' <- ST.gets mappings
+  name <- case M.lookup (makeName name) mappings' of
+    Just name' -> return (D.Simple name')
+    Nothing -> return name
+  pats' <- mapM (\(Located pos n) -> resolveImportedPattern n >>= return . (:>: pos)) pats
+  return $ ConstructorPattern name pats'
+  
 resolveImportedUpdate :: MonadBundling m => Located Updated -> m (Located Updated)
 resolveImportedUpdate (VariableUpdate name :>: pos) = do
   mappings' <- ST.gets mappings
