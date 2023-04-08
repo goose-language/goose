@@ -14,8 +14,7 @@ parseDeclaration = E.buildExpressionParser table $ P.choice [
     parsePrimitive,
     parseFunction,
     parseList,
-    parseGeneric,
-    parseIdentifier
+    parseNamespaced
   ]
   where
     table = [
@@ -46,11 +45,13 @@ parseFunction = do
 parseList :: Monad m => L.Parser m D.Declaration
 parseList = D.List <$> L.brackets parseDeclaration
 
-parseIdentifier :: Monad m => L.Parser m D.Declaration
-parseIdentifier = D.ID <$> parseNamespaced
+isCapitalized :: String -> Bool
+isCapitalized (x:_) = x `elem` ['A'..'Z']
+isCapitalized _ = False
 
-parseNamespaced :: Monad m => L.Parser m D.Namespaced
-parseNamespaced =  P.try (D.Namespaced <$> P.sepBy1 L.identifier (L.reservedOp "::") <*> (L.reservedOp "::" *> L.capitalized)) P.<|> D.Simple <$> L.capitalized
-
-parseGeneric :: Monad m => L.Parser m D.Declaration
-parseGeneric = D.Generic <$> L.lowered
+parseNamespaced :: Monad m => L.Parser m D.Declaration
+parseNamespaced =  do
+  names <- P.sepBy1 L.identifier (L.reservedOp "::")
+  case names of 
+    [name] -> return $ if isCapitalized name then D.ID (D.Simple name) else D.Generic name
+    _ -> return . D.ID $ D.Namespaced (init names) (last names)
