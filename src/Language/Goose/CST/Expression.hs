@@ -87,10 +87,6 @@ data Expression
   -- | Of the form: { e₀; e₁; ...; eₙ }
   | Sequence [Located Expression]
 
-  -- | A dereference expression, used to represent a value at an address in memory
-  -- | Of the form: *variable
-  | Dereference (Located Expression)
-
   -- | A list expression
   -- | Of the form: [e₀, e₁, ..., eₙ]
   | List [Located Expression]
@@ -132,6 +128,8 @@ data Expression
   -- | Of the form: x = e
   | Update (Located Updated) (Located Expression)
   
+  -- | A return expression
+  -- | Of the form: return e
   | Return (Located Expression)
   deriving Eq
 
@@ -158,7 +156,6 @@ instance Show Expression where
   show (Let variable body expression) = "def " ++ show variable ++ " = " ++ show body ++ " in " ++ show expression
   show (Match expression cases) = "match " ++ show expression ++ " { " ++ intercalate ", " (map (\(pattern, body) -> show pattern ++ " = " ++ show body) cases) ++ " }"
   show (Sequence expressions) = "do " ++ intercalate "; " (map show expressions) ++ " end"
-  show (Dereference expression) = "*" ++ show expression
   show (List expressions) = "[" ++ intercalate ", " (map show expressions) ++ "]"
   show (ListAccess list index) = show list ++ "[" ++ show index ++ "]"
   show (While condition body) = "while " ++ show condition ++ " " ++ show body
