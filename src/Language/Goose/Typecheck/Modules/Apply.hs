@@ -133,12 +133,11 @@ instance Types Pattern where
   free _ = undefined
 
   apply s (PVariable x t) = PVariable x $ apply s t
-  apply s (PConstructor name ts t) = PConstructor name (apply s ts) (apply s t)
+  apply s (PConstructor name ts) = PConstructor name (apply s ts)
   apply _ PWildcard = PWildcard
-  apply s (PAs x p) = PAs (apply s x) (apply s p)
   apply _ (PLiteral l) = PLiteral l
-  apply s (PSlice x xs) = PSlice (apply s x) $ apply s xs
   apply s (PList ps) = PList $ apply s ps
+  apply s (PStructure fs) = PStructure $ apply s fs
 
 instance Types Toplevel where
   free _ = undefined

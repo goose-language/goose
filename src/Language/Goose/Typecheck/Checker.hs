@@ -15,6 +15,7 @@ import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Located as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Language.Goose.CST.Modules.Declaration as D
+import qualified Language.Goose.CST.Modules.Pattern as P
 import qualified Language.Goose.Typecheck.Definition.AST as A
 
 import qualified Data.Map as M
@@ -55,11 +56,6 @@ inferExpression :: Infer C.Expression m A.Expression
 inferExpression (C.Located _ (C.Literal lit)) = do
   (t, l) <- inferLiteral lit
   return (t, A.Literal l)
-inferExpression (C.Located pos (C.Dereference e)) = do
-  tv <- fresh
-  (t, e') <- inferExpression e
-  unify (t :~: Mutable tv, pos)
-  return (tv, e')
 inferExpression (C.Located pos (C.Variable (D.Simple name))) = do
   env <- ask
   case M.lookup name (fst env) of
@@ -161,6 +157,21 @@ inferExpression (C.Located pos (C.Lambda args ret body)) = do
   unify (t :~: tv, pos)
   ST.modify $ \s' -> s' { returnType = ret' }
   return (map snd tvs :-> tv, A.Lambda (map (uncurry C.Annoted) tvs) e')
+inferExpression (C.Located pos (C.Match expr cases)) = do
+  (t, e') <- local' $ inferExpression expr
+  (tys, cases') <- L.unzip <$> local' (CM.forM cases (\(pat, expr') -> do
+    (t', pat', vars) <- inferPattern pat
+    unify (t :~: t', pos)
+    (t'', e'') <- withVariables (M.toList vars) $ inferExpression expr'
+    return ((t', t''), (pat', e''))))
+  
+  (ret, xs) <- case tys of
+    [] -> E.throwError ("Empty match", Nothing, pos)
+    ((_, ret):xs) -> return (ret, xs)
+  
+  CM.forM_ xs (\(_, t') -> unify (ret :~: t', pos))
+  
+  return (ret, A.Match e' cases')
 inferExpression (C.Located pos _) = E.throwError ("Invalid expression", Nothing, pos)
 
 inferUpdate :: Infer C.Updated m A.Updated
@@ -184,6 +195,45 @@ inferUpdate (C.Located pos (C.StructureUpdate up field)) = do
   unify (Field field tv t, pos)
   return (tv, A.StructureUpdate e' field)
 inferUpdate (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
+
+inferPattern :: MonadChecker m => C.Located P.Pattern -> m (Type, A.Pattern, M.Map String Scheme)
+inferPattern (C.Located _ (P.VariablePattern (D.Simple name))) = do
+  env <- snd <$> ask
+  case M.lookup name env of
+    Nothing -> do
+      tv <- fresh
+      return (tv, A.PVariable name tv, M.singleton name (Forall [] tv))
+    Just scheme -> do
+      t <- instantiate scheme
+      return (t, A.PConstructor name [], M.empty)
+inferPattern (C.Located _ (P.LiteralPattern lit)) = do
+  (t, lit') <- inferLiteral lit
+  return (t, A.PLiteral lit', M.empty)
+inferPattern (C.Located pos (P.ListPattern ps)) = do
+  tv <- fresh
+  (ts, ps', envs) <- L.unzip3 <$> mapM inferPattern ps
+  CM.unless (length ts == 0) $ unify (TList (last ts) :~: tv, pos)
+  return (TList tv, A.PList ps', M.unions envs)
+inferPattern (C.Located _ (P.StructurePattern ps)) = do
+  (fields, ps', envs) <- L.unzip3 <$> mapM (\(name, p) -> do
+    (t, p', env) <- inferPattern p
+    return ((name, p'), (name, t), env)) ps
+  return (TRec ps', A.PStructure fields, M.unions envs)
+inferPattern (C.Located _ (P.WildcardPattern)) = do
+  tv <- fresh
+  return (tv, A.PWildcard, M.empty)
+inferPattern (C.Located pos (P.ConstructorPattern (D.Simple name) pats)) = do
+  env <- snd <$> ask
+  tv <- fresh
+  (t, p, env') <- case M.lookup name env of
+    Nothing -> E.throwError ("Unbound constructor: " ++ name, Nothing, pos)
+    Just scheme -> do
+      t <- instantiate scheme
+      return (t, name, M.empty)
+  (t', pats', envs) <- L.unzip3 <$> mapM inferPattern pats
+  unify (t :~: (t' :-> tv), pos)
+  return (tv, A.PConstructor p pats', M.unions envs `M.union` env')
+inferPattern (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 inferLiteral :: MonadChecker m => C.Literal -> m (Type, C.Literal)
 inferLiteral (C.Int i) = return (Int, C.Int i)

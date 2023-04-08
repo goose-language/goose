@@ -109,11 +109,10 @@ data Updated
 data Pattern
   = PVariable String Type
   | PLiteral Literal
-  | PConstructor String [Pattern] Type
-  | PWildcard
-  | PAs String Pattern
-  | PSlice Pattern Pattern
+  | PStructure [(Name, Pattern)]
   | PList [Pattern]
+  | PConstructor String [Pattern]
+  | PWildcard
   deriving Eq
 
 instance Show Toplevel where
@@ -125,11 +124,10 @@ instance Show Toplevel where
 instance Show Pattern where
   show (PVariable x _) = x
   show (PLiteral l) = show l
-  show (PConstructor x ps _) = x ++ " " ++ unwords (map show ps)
+  show (PConstructor x ps) = x ++ " " ++ unwords (map show ps)
   show PWildcard = "_"
-  show (PAs x p) = x ++ " as " ++ show p
-  show (PSlice p1 p2) = show p1 ++ " .. " ++ show p2
   show (PList ps) = "[" ++ unwords (map show ps) ++ "]"
+  show (PStructure ps) = "{" ++ unwords (map (\(x, p) -> x ++ " = " ++ show p) ps) ++ "}"
 
 instance Show Expression where
   show (Variable x _) = x
