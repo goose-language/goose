@@ -1,7 +1,7 @@
 public module IO 
   declare print[a](input: a): nil
 
-  def println(input) do
+  def println[a](input: a): nil do
     IO::print(input);
     IO::print('\n')
   end
@@ -13,20 +13,20 @@ public module IO
   declare fileExists(filename: [char]): bool
   declare readDirectory(path: [char]): [[char]]
 
-  def puts(input) do
+  def puts(input: string): nil do
     for i in input do
       IO::print(i)
     end
   end
 
-  def putsln(input) do
+  def putsln(input: string): nil do
     IO::puts(input)
     IO::print('\n')
   end
 
   declare exit[a](code: int): a
 
-  def throw(message) do
+  def throw(message: string): nil do
     IO::println(message)
     IO::exit(1)
   end

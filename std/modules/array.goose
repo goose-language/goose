@@ -6,10 +6,10 @@ public module Array
   declare create[a](length: int, value: a): [a]
   declare next[a](array: [a]): [a]
 
-  def empty(arr) return Array::length(arr) == 0
+  def empty[a](arr: [a]): bool do return Array::length(arr) == 0 end
 
-  def concat(arr1, arr2) do
-    def acc = Array::create(Array::length(arr1) + Array::length(arr2), if Array::length(arr1) > 0 then arr1[0] else arr2[0])
+  def concat[a](arr1: [a], arr2: [a]): [a] do
+    def acc: [a] = Array::create(Array::length(arr1) + Array::length(arr2), if Array::length(arr1) > 0 then arr1[0] else arr2[0])
     def i = 0
     for item in arr1 do
       acc[i] = item
@@ -22,7 +22,7 @@ public module Array
     return acc
   end
   
-  def map(arr, f) do
+  def map[a, b](arr: [a], f: fun(a): b): [b] do
     if Array::empty(arr) then return []
     def acc = Array::create(Array::length(arr), arr[0])
     def i = 0
@@ -33,12 +33,12 @@ public module Array
     return acc
   end
   
-  def push(arr, value) do
+  def push[a](arr: [a], value: a): nil do
     arr = Array::concat(arr, [value])
     return nil
   end
 
-  def slice(array, idx) do
+  def slice[a](array: [a], idx: int): [a] do
     def i = 0
     def arr = IO::clone(array)
     while i < idx do
@@ -49,7 +49,7 @@ public module Array
     return arr
   end
 
-  def startsWith(arr, prefix) do
+  def startsWith[a](arr: [a], prefix: [a]): bool do
     if Array::length(arr) < Array::length(prefix) then return false
     def i = 0
     for item in prefix do
@@ -59,7 +59,7 @@ public module Array
     return true
   end
 
-  def sort(array, f) do
+  def sort[a](array: [a], f: fun(a, b): bool): [a] do
     def arr = IO::clone(array)
     def i = 0
     def j = 0
@@ -79,7 +79,7 @@ public module Array
     return arr
   end
 
-  def reverse(arr) do
+  def reverse[a](arr: [a]): [a] do
     def i = 0
     def j = Array::length(arr) - 1
     def tmp = 0
