@@ -6,11 +6,11 @@ import qualified Language.Goose.CST.Located as C
 import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Language.Goose.Parser.Lexer as L
-import qualified Language.Goose.CST.Modules.Declaration as D
 
 import qualified Language.Goose.Parser.Modules.Toplevel as T
 import qualified Language.Goose.Parser.Modules.Declaration as D
-import qualified Data.Functor as F
+import qualified Language.Goose.Parser.Modules.Literal as L
+import qualified Language.Goose.Parser.Modules.Pattern as P
 
 import Control.Applicative
 
@@ -58,7 +58,8 @@ parseTerm = P.choice [
     L.parens parseExpression,
     parseObject,
     parseUpdate,
-    parseLiteral,
+    parseMatch,
+    L.locate $ C.Literal <$> L.parseLiteral,
     parseVariable,
     parseList,
     parseLet,
@@ -68,6 +69,20 @@ parseTerm = P.choice [
     parseSequence,
     parseReturn
   ]
+
+parseMatch :: Monad m => L.Goose m C.Expression
+parseMatch = L.locate $ do
+  L.reserved "match"
+  expr <- parseExpression
+  L.reserved "do"
+  cases <- L.commaSep parseCase
+  L.reserved "end"
+  return $ C.Match expr cases
+  where parseCase = do
+          pattern' <- P.parsePattern
+          L.reservedOp "->"
+          expr <- parseExpression
+          return (pattern', expr)
 
 parseObject :: Monad m => L.Goose m C.Expression
 parseObject = L.locate $ do
@@ -84,15 +99,7 @@ parseReturn = L.locate $ do
   C.Return <$> parseExpression
 
 parseVariable :: Monad m => L.Goose m C.Expression
-parseVariable = L.locate $ C.Variable <$> parseNamespaced
-
-parseNamespaced :: Monad m => L.Parser m D.Namespaced
-parseNamespaced = P.try (do
-    names <- P.sepBy1 L.identifier (L.reservedOp "::")
-    case names of 
-      [name] -> return $ D.Simple name
-      _ -> return $ D.Namespaced (init names) (last names))
-  P.<|> D.Simple <$> L.identifier
+parseVariable = L.locate $ C.Variable <$> P.parseNamespaced
 
 parseLet :: Monad m => L.Goose m C.Expression
 parseLet = L.locate $ do
@@ -120,16 +127,6 @@ parseSequence = L.locate $ do
   exprs <- P.many (parseExpression <* P.optionMaybe L.semi)
   L.reserved "end"
   return $ C.Sequence exprs
-
-parseLiteral :: Monad m => L.Goose m C.Expression
-parseLiteral = L.locate $ C.Literal <$> P.choice [
-    C.Int <$> L.integer,
-    C.Float <$> L.float,
-    C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
-    C.Char <$> L.charLiteral,
-    C.String <$> L.stringLiteral,
-    C.Unit <$ L.reserved "nil"
-  ]
 
 parseList :: Monad m => L.Goose m C.Expression
 parseList = L.locate $ C.List <$> L.brackets (L.commaSep parseExpression)
@@ -196,6 +193,6 @@ parseVariableUpdate = E.buildExpressionParser table parseUpdateTerm
           s <- P.getPosition
           return $ \x@(C.Located (pos, _) _) -> C.StructureUpdate x name C.:>: (pos, s)
         parseUpdateTerm = P.choice [
-            L.locate $ C.VariableUpdate <$> parseNamespaced,
+            L.locate $ C.VariableUpdate <$> P.parseNamespaced,
             L.parens parseVariableUpdate
           ]
