@@ -73,6 +73,8 @@ library
         Language.Goose.Parser.Parser
             Language.Goose.Parser.Modules.Declaration
             Language.Goose.Parser.Modules.Toplevel
+            Language.Goose.Parser.Modules.Pattern
+            Language.Goose.Parser.Modules.Literal
 
         Language.Goose.Module.Monad
         Language.Goose.Module.Resolver
@@ -88,7 +90,6 @@ library
             Language.Goose.Typecheck.Definition.Monad
             Language.Goose.Typecheck.Definition.Type
             Language.Goose.Typecheck.Definition.Free
-
         
         Language.Goose.Transformation.ANF.ANF
         Language.Goose.Transformation.ANF.AST
@@ -105,6 +106,7 @@ library
             Language.Goose.CLang.Definition.IR
             Language.Goose.CLang.Definition.Generation
         Language.Goose.CLang.Build
+        Language.Goose.CLang.Pattern
 
     -- Modules included in this library but not exported.
     -- other-modules:
