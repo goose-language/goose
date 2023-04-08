@@ -50,8 +50,7 @@ parseIdentifier :: Monad m => L.Parser m D.Declaration
 parseIdentifier = D.ID <$> parseNamespaced
 
 parseNamespaced :: Monad m => L.Parser m D.Namespaced
-parseNamespaced =  P.try (D.Namespaced <$> P.sepBy1 L.identifier (L.reservedOp "::") <*> (L.reservedOp "::" *> L.capitalized))
-             P.<|> D.Simple <$> L.capitalized
+parseNamespaced =  P.try (D.Namespaced <$> P.sepBy1 L.identifier (L.reservedOp "::") <*> (L.reservedOp "::" *> L.capitalized)) P.<|> D.Simple <$> L.capitalized
 
 parseGeneric :: Monad m => L.Parser m D.Declaration
 parseGeneric = D.Generic <$> L.lowered
