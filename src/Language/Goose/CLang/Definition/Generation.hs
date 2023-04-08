@@ -105,8 +105,9 @@ includeLibrary = do
   let rttiConv = "std/core/conversion.c"
   let rttiRegex = "std/core/regex.c"
   let rttiType = "std/core/type.c"
+  let rttiError = "std/core/error.c"
   
-  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType]
+  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType, rttiError]
 
 includeHeaders :: [String]
 includeHeaders = do

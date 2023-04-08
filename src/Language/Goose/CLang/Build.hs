@@ -33,5 +33,5 @@ build ast file libraries headers = do
   writeFile output $ unlines [generateHeaders headers, "#include <stdlib.h>", decls, generate ast']
   compiler <- getCLangCompiler
   callProcess compiler $ libraries ++ [output] ++ ["-w", "-g"]
-  putStrLn $ compiler ++ " " ++ unwords (libraries ++ [output] ++ ["-w", "-g"])
+  -- putStrLn $ compiler ++ " " ++ unwords (libraries ++ [output] ++ ["-w", "-g"])
   
