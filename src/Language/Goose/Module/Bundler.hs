@@ -59,8 +59,8 @@ analyseToplevel (Function (C.Annoted name ret) gens args body :>: pos) = do
         name' <- createName name
         return (name', name')
   let args' = map C.annotedName args
-  tys <- mapM resolveImportedMaybeType $ map C.annotedType args
-  ret <- resolveImportedMaybeType ret
+  tys <- mapM (`resolveImportedMaybeType` pos) $ map C.annotedType args
+  ret <- resolveImportedMaybeType ret pos
   let env' = M.fromList $ zip args' args'
   body' <- local' (\s -> s { mappings = M.insert name' new (M.union env' (mappings s)) }) $ do
     resolveImportedExpressions body
@@ -74,22 +74,22 @@ analyseToplevel (Namespace name toplevels :>: _) = do
       ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
       return $ keepPublic toplevels'
 analyseToplevel (Extern name gens decl ret :>: pos) = do
-  decl' <- mapM resolveImportedType decl
-  ret' <- resolveImportedType ret
+  decl' <- mapM (`resolveImportedType` pos) decl
+  ret' <- resolveImportedType ret pos
   name' <- createName name
   ST.modify $ \s -> s { mappings = M.insert name' name (mappings s) }
   return [Extern name gens decl' ret' :>: pos]
 analyseToplevel (Declare name gens decl ret :>: pos) = do
-  decl' <- mapM resolveImportedType decl
-  ret' <- resolveImportedType ret
+  decl' <- mapM (`resolveImportedType` pos) decl
+  ret' <- resolveImportedType ret pos
   name' <- createName name
   ST.modify $ \s -> s { mappings = M.insert name' name' (mappings s) }
   return [Declare name' gens decl' ret' :>: pos]
 analyseToplevel (Public toplevel :>: pos) = map (Located pos . Public) <$> analyseToplevel toplevel
 analyseToplevel (Enumeration name gens decls :>: pos) = do
-  decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM resolveImportedType ty) decls
   name' <- createName name
   ST.modify $ \s -> s { types = M.insert name' name (types s) }
+  decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM (`resolveImportedType` pos) ty) decls
   let declsNames = zip (map C.annotedName decls') (map C.annotedName decls')
   ST.modify $ \s -> s { mappings = M.union (M.fromList declsNames) (mappings s) }
   return [Enumeration name' gens decls' :>: pos]
@@ -131,25 +131,29 @@ makeName :: D.Namespaced -> D.Name
 makeName (D.Namespaced paths name) = (if not (null paths) then L.intercalate "::" paths ++ "::" else "") ++ name
 makeName (D.Simple name) = name
 
-getName :: D.Namespaced -> D.Name
-getName (D.Namespaced _ name) = name
-getName (D.Simple name) = name
-
-resolveImportedType :: MonadBundling m => D.Declaration -> m D.Declaration
-resolveImportedType (D.ID name) = do
+resolveImportedType :: MonadBundling m => D.Declaration -> Position -> m D.Declaration
+resolveImportedType (D.ID name) pos = do
   mappings' <- ST.gets types
   case M.lookup (makeName name) mappings' of
     Just name' -> return $ D.ID (D.Simple name')
-    Nothing -> return $ D.ID name
-resolveImportedType (D.List t) = do
-  t' <- resolveImportedType t
+    Nothing -> E.throwError ("Type " ++ show name ++ " is not defined", pos)
+resolveImportedType (D.List t) pos = do
+  t' <- resolveImportedType t pos
   return $ D.List t'
-resolveImportedType x = return x
+resolveImportedType (D.Constructor name args) pos = do
+  name' <- resolveImportedType name pos
+  args' <- mapM (`resolveImportedType` pos) args
+  return $ D.Constructor name' args'
+resolveImportedType (D.Function args ret) pos = do
+  args' <- mapM (`resolveImportedType` pos) args
+  ret' <- resolveImportedType ret pos
+  return $ D.Function args' ret'
+resolveImportedType x _ = return x
 
-resolveImportedMaybeType :: MonadBundling m => Maybe D.Declaration -> m (Maybe D.Declaration)
-resolveImportedMaybeType Nothing = return Nothing
-resolveImportedMaybeType (Just t) = do
-  t' <- resolveImportedType t
+resolveImportedMaybeType :: MonadBundling m => Maybe D.Declaration -> Position -> m (Maybe D.Declaration)
+resolveImportedMaybeType Nothing _ = return Nothing
+resolveImportedMaybeType (Just t) pos = do
+  t' <- resolveImportedType t pos
   return $ Just t'
 
 resolveImportedExpressions :: MonadBundling m => Located (Expression) -> m (Located (Expression))
@@ -164,7 +168,7 @@ resolveImportedExpressions (Application n args :>: pos) = do
   return $ Application n' args' :>: pos
 resolveImportedExpressions (Lambda args ret body :>: pos) = do
   let names = map C.annotedName args
-  tys <- mapM resolveImportedMaybeType $ map C.annotedType args
+  tys <- mapM (`resolveImportedMaybeType` pos) $ map C.annotedType args
   body' <- local' (\s -> s { mappings = M.union (M.fromList $ zip names names) (mappings s) }) $ do
     resolveImportedExpressions body
   return $ Lambda (zipWith C.Annoted names tys) ret body' :>: pos
@@ -187,7 +191,7 @@ resolveImportedExpressions (ListAccess arr index :>: pos) = do
   return $ ListAccess arr' index' :>: pos
 resolveImportedExpressions (Let (C.Annoted n t) expr body :>: pos) = do
   ST.modify (\s -> s { mappings = M.insert n n (mappings s) })
-  t <- resolveImportedMaybeType t
+  t <- resolveImportedMaybeType t pos
   expr' <- resolveImportedExpressions expr
   body' <- resolveImportedExpressions body
   return $ Let (C.Annoted n t) expr' body' :>: pos
@@ -197,7 +201,7 @@ resolveImportedExpressions (While cond body :>: pos) = do
   return $ While cond' body' :>: pos
 resolveImportedExpressions (For (C.Annoted name t) list body :>: pos) = do
   from' <- resolveImportedExpressions list
-  t <- resolveImportedMaybeType t
+  t <- resolveImportedMaybeType t pos
   body' <- local' (\s -> s { mappings = M.insert name name (mappings s) }) $ mapM resolveImportedExpressions body
   return $ For (C.Annoted name t) from' body' :>: pos
 resolveImportedExpressions (Update update expr :>: pos) = do
