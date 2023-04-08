@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include "conversion.h"
 #include "error.h"
+#include <string.h>
 
 Value* IO_fileExists (Value *filename) {
   Value *v = index_(filename, 0);
@@ -31,6 +32,18 @@ Value* IO_readDirectory(Value* args) {
       result = push(result, string(dir->d_name));
     }
     closedir(d);
+  }
+  return result;
+}
+
+Value* getVariantArguments(Value* dict) {
+  Value *result = emptyList();
+  while (dict != NULL) {
+    if (dict->s.value == NULL) break;
+    if (strcmp(dict->s.name, "type") != 0 && strcmp(dict->s.name, "$$enum") != 0) {
+      result = push(result, dict->s.value);
+    }
+    dict = dict->s.next;
   }
   return result;
 }
@@ -91,22 +104,36 @@ Value* IO_print(Value *args)
     printf("%s", v->b ? "true" : "false");
     break;
   case STRUCT:
-    printf("{");
-    if (v->s.value != NULL) {
-      printf(" ");
-      for (Value *i = v; i != NULL; i = i->s.next)
-      {
-        if (i->s.value == NULL) break;
-        printf("%s: ", i->s.name);
-        IO_print(list(i->s.value, NULL));
-        if (i->s.next != NULL)
-        {
+    if (Array_has(list(v, list(string("$$enum"), NULL)))->b && property_(v, "$$enum")->b) {
+      printf("%s(", toString(property_(v, "type")));
+      Value* varArgs = getVariantArguments(v);
+      while (varArgs != NULL) {
+        if (varArgs->l.value == NULL) break;
+        IO_print(list(varArgs->l.value, NULL));
+        if (varArgs->l.next != NULL) {
           printf(", ");
         }
+        varArgs = varArgs->l.next;
       }
-      printf(" ");
+      printf(")");
+    } else {
+      printf("{");
+      if (v->s.value != NULL) {
+        printf(" ");
+        for (Value *i = v; i != NULL; i = i->s.next)
+        {
+          if (i->s.value == NULL) break;
+          printf("%s: ", i->s.name);
+          IO_print(list(i->s.value, NULL));
+          if (i->s.next != NULL)
+          {
+            printf(", ");
+          }
+        }
+        printf(" ");
+      }
+      printf("}");
     }
-    printf("}");
   }
   return integer(0);
 }
