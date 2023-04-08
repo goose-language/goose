@@ -11,7 +11,6 @@ import Language.Goose.Transformation.Closure.Hoisting
 import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.CLang.Build
 import Language.Goose.CLang.Definition.Generation
-import Language.Goose.Typecheck.Modules.Substitution
 import System.Environment
 
 import qualified Log.Error as L
