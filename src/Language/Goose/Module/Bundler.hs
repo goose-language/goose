@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 module Language.Goose.Module.Bundler where
 import Language.Goose.Module.Monad
 import Language.Goose.CST.Expression
@@ -46,7 +47,7 @@ checkModule = foldl checkToplevel
 createName :: MonadBundling m => String -> m String
 createName name = do
   paths <- ST.gets currentPaths
-  return $ (if not (null paths) then L.intercalate "_" paths ++ "_" else "") ++ name
+  return $ (if not (null paths) then L.intercalate "::" paths ++ "::" else "") ++ name
 
 analyseToplevel :: MonadBundling m => Located (Toplevel) -> m [Located (Toplevel)]
 analyseToplevel (Function (C.Annoted name ret) gens args body :>: pos) = do
@@ -87,7 +88,9 @@ analyseToplevel (Public toplevel :>: pos) = map (Located pos . Public) <$> analy
 analyseToplevel (Enumeration name gens decls :>: pos) = do
   decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM resolveImportedType ty) decls
   name' <- createName name
-  ST.modify $ \s -> s { mappings = M.insert name' name (mappings s) }
+  ST.modify $ \s -> s { types = M.insert name' name (types s) }
+  let declsNames = zip (map C.annotedName decls') (map C.annotedName decls')
+  ST.modify $ \s -> s { mappings = M.union (M.fromList declsNames) (mappings s) }
   return [Enumeration name' gens decls' :>: pos]
 analyseToplevel x = return [x]
 
@@ -124,7 +127,7 @@ lookupModule elements ast@(Located pos _:_) = do
 lookupModule _ [] = return []
 
 makeName :: D.Namespaced -> D.Name
-makeName (D.Namespaced paths name) = (if not (null paths) then L.intercalate "_" paths ++ "_" else "") ++ name
+makeName (D.Namespaced paths name) = (if not (null paths) then L.intercalate "::" paths ++ "::" else "") ++ name
 makeName (D.Simple name) = name
 
 getName :: D.Namespaced -> D.Name
