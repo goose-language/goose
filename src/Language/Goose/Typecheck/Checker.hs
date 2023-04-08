@@ -25,8 +25,6 @@ import qualified Data.Bifunctor as BF
 import qualified Control.Monad.State as ST
 import qualified Data.List as L
 
-import Debug.Trace
-
 generalize :: Environment -> Type -> Scheme
 generalize env t = Forall vars t
   where vars = S.toList (free t S.\\ free env)
@@ -274,13 +272,13 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
   -- Building structures types for each constructor
   -- of the following form:
   -- def name = fun(arg₁, arg₂, ..., argₙ) return { type: name, arg₁: arg₁, arg₂: arg₂, ..., argₙ: argₙ }
-  
+
   structures <- mapM (\(n, t) -> case t of
     args :-> ret -> do
       let args' = zipWith (\t' i -> C.Annoted ("a" ++ show i) t') args [(0 :: Integer)..]
       let variables' = zipWith (\t' i -> A.Variable ("a" ++ show i) t') args [(0 :: Integer)..]
       let fields = zipWith (\_ i ->("a" ++ show i)) args [(0 :: Integer)..]
-      return $ A.Function n args' ret (A.Return $ A.Structure $ (zip fields variables') ++ [("type", A.Literal (C.String n))])
+      return $ A.Function n args' ret (A.Return $ A.Structure $ (zip fields variables') ++ [("type", A.Literal (C.String n)), ("$$enum", A.Literal (C.Bool True))])
     _ -> E.throwError ("Invalid constructor of enumeration", Nothing, pos)) constructors'
 
   return (Void, structures)
