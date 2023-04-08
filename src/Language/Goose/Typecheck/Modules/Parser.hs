@@ -13,6 +13,12 @@ class Parser a where
   toWithEnv :: T.MonadChecker m => a -> M.Map String T.Type -> m T.Type
   from :: T.Type -> a
 
+instance Parser a => Parser (Maybe a) where
+  toWithEnv x env = case x of
+    Just x' -> toWithEnv x' env
+    Nothing -> T.fresh
+  from = undefined
+
 instance Parser D.Declaration where
   toWithEnv = go
     where go :: T.MonadChecker m => D.Declaration -> M.Map String T.Type -> m T.Type
@@ -30,6 +36,10 @@ instance Parser D.Declaration where
           go D.Float _ = return (T.Float)
           go D.Char _ = return (T.Char)
           go D.Unit _ = return (T.Void)
+          go (D.Function args ret) env = do
+            ts <- mapM (flip go env) args
+            t <- go ret env
+            return $ ts T.:-> t
           go (D.List v) env = T.TApp (T.TId "List") . (:[]) <$> go v env
           go _ _ = undefined
   from = undefined

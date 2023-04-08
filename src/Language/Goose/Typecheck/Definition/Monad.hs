@@ -14,6 +14,7 @@ data CheckerState = CheckerState {
   variables :: Map String Scheme,
   types :: Map String Scheme,
   constraints :: [Constraint],
+  generics :: Map String Type,
   returnType :: Type
 }
 
