@@ -6,6 +6,7 @@ import Language.Goose.CLang.Definition.IR
 import Data.Maybe
 import Language.Goose.CST.Literal
 import Language.Goose.CLang.Definition.Generation
+import Language.Goose.CLang.Pattern
 import Data.Bifunctor
 import Data.List
 
@@ -20,9 +21,15 @@ compileToplevel (DDeclare (Annoted name t)) = case t of
 from :: Type -> CType
 from _ = rttiName
 
+createIfSequence :: [IRStatement]-> IRStatement
+createIfSequence [] = error "Empty if sequence"
+createIfSequence [x] = x
+createIfSequence (IRIf cond then':xs) = IRIfElse cond then' [createIfSequence xs]
+createIfSequence _ = error "Invalid if sequence"
+
 compileStatement :: ANFStatement -> IRStatement
 compileStatement (SReturn e) = IRReturn (compileExpression e)
-compileStatement (SIf e t f) = IRIf (compileExpression e) (map compileStatement t) (map compileStatement f)
+compileStatement (SIf e t f) = IRIfElse (compileExpression e) (map compileStatement t) (map compileStatement f)
 compileStatement (SWhile e s) = IRWhile (compileExpression e) (map compileStatement s)
 compileStatement (SFor name e s) = IRFor name (compileExpression e) (map compileStatement s)
 compileStatement (SExpression e) = IRExpression (compileExpression e)
@@ -31,6 +38,13 @@ compileStatement SBreak = IRBreak
 compileStatement SContinue = IRContinue
 compileStatement (SLet name e) = IRDeclarationStatement name (compileExpression e)
 compileStatement (SUpdate u e) = IRUpdate (compileUpdated u) (compileExpression e)
+compileStatement (SMatch e cases) = do
+  let x = compileExpression e
+  let xs = map (\(p, b) -> do
+          let b' = map compileStatement b
+          compileCase p x b') cases
+  createIfSequence xs
+
 
 compileExpression :: ANFExpression -> IRExpression
 compileExpression (EVariable name) = IRVariable name
@@ -49,8 +63,8 @@ compileExpression (EBinary op e1 e2) = case op of
   ">" -> IRApplication (IRVariable "gt") [compileExpression e1, compileExpression e2]
   "<=" -> IRApplication (IRVariable "lte") [compileExpression e1, compileExpression e2]
   ">=" -> IRApplication (IRVariable "gte") [compileExpression e1, compileExpression e2]
-  "&&" -> IRApplication (IRVariable "and_") [compileExpression e1, compileExpression e2]
-  "||" -> IRApplication (IRVariable "or_") [compileExpression e1, compileExpression e2]
+  "&&" -> IRBinary "&&" (compileExpression e1) (compileExpression e2)
+  "||" -> IRBinary "||" (compileExpression e1) (compileExpression e2)
   _ -> error "Not implemented"
 compileExpression (EUnary op e) = IRUnary op (compileExpression e)
 compileExpression (EIf e t f) = IRTernary (compileExpression e) (compileExpression t) (fromMaybe (IRLiteral Unit) (fmap compileExpression f))
