@@ -3,11 +3,13 @@ import qualified Text.Parsec as P
 import qualified Text.Parsec.Expr as E
 import qualified Language.Goose.CST.Expression as C
 import qualified Language.Goose.CST.Located as C
+import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Language.Goose.Parser.Lexer as L
 import qualified Language.Goose.CST.Modules.Declaration as D
 
 import qualified Language.Goose.Parser.Modules.Toplevel as T
+import qualified Language.Goose.Parser.Modules.Declaration as D
 import qualified Data.Functor as F
 
 import Control.Applicative
@@ -96,11 +98,12 @@ parseLet :: Monad m => L.Goose m C.Expression
 parseLet = L.locate $ do
   L.reserved "def"
   name <- L.identifier
+  ty <- P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration
   L.reservedOp "="
   value <- parseExpression
   s <- P.getPosition
   body <- P.option (C.Literal C.Unit C.:>: (s, s)) $ L.reserved "in" *> parseExpression
-  return $ C.Let name value body
+  return $ C.Let (C.Annoted name ty) value body
 
 parseIf :: Monad m => L.Goose m C.Expression
 parseIf = L.locate $ do
@@ -143,20 +146,34 @@ parseWhile = L.locate $ do
 parseFunction :: Monad m => L.Goose m C.Expression
 parseFunction = L.locate $ do
   L.reserved "fun"
-  args <- L.parens $ L.commaSep L.identifier
-  body <- parseExpression
-  return $ C.Lambda args body
+  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> (P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration)))
+  (ret, body) <- P.choice [
+      P.try $ do
+        L.reservedOp ":"
+        ret <- D.parseDeclaration
+        s <- P.getPosition
+        L.reservedOp "do"
+        exprs <- P.many (parseExpression <* P.optionMaybe L.semi)
+        L.reserved "end"
+        e <- P.getPosition
+        return (Just ret, C.Located (s, e) (C.Sequence exprs)),
+      do
+        body <- parseExpression
+        return (Nothing, body)
+    ]
+  return $ C.Lambda args ret body
 
 parseFor :: Monad m => L.Goose m C.Expression
 parseFor = L.locate $ do
   L.reserved "for"
   name <- L.identifier
+  ty <- P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration
   L.reserved "in"
   lst <- parseExpression
   L.reserved "do"
   body <- many (parseExpression <* P.optionMaybe L.semi)
   L.reserved "end"
-  return $ C.For name lst body
+  return $ C.For (C.Annoted name ty) lst body
 
 parseUpdate :: Monad m => L.Goose m C.Expression
 parseUpdate = L.locate $ do

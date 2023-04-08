@@ -1,6 +1,8 @@
 module Language.Goose.Parser.Modules.Toplevel where
 import qualified Text.Parsec as P
 import qualified Language.Goose.CST.Expression as C
+import qualified Language.Goose.CST.Annoted as C
+import qualified Language.Goose.CST.Located as C
 import qualified Language.Goose.Parser.Lexer as L
 
 import qualified Language.Goose.Parser.Modules.Declaration as D
@@ -8,6 +10,7 @@ import qualified Language.Goose.Parser.Modules.Declaration as D
 -- Toplevel parser entry
 parseToplevel :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseToplevel parseExpression = P.choice [
+    parseEnumeration,
     parseModule parseExpression,
     parseDeclare,
     parseFunction parseExpression,
@@ -17,13 +20,36 @@ parseToplevel parseExpression = P.choice [
     parseImport
   ]
 
+parseEnumeration :: Monad m => L.Goose m C.Toplevel
+parseEnumeration = L.locate $ do
+  L.reserved "enum"
+  name <- L.capitalized
+  generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
+  values <- P.many (C.Annoted <$> L.identifier <*> P.option [] (L.parens (L.commaSep D.parseDeclaration)))
+  L.reserved "end"
+  return $ C.Enumeration name generics values
+
 parseFunction :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseFunction parseExpression = L.locate $ do
   L.reserved "def"
   name <- L.identifier
-  args <- L.parens (L.commaSep L.identifier)
-  body <- parseExpression
-  return $ C.Function name args body
+  generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
+  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> (P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration)))
+  (ret, body) <- P.choice [
+      P.try $ do
+        L.reservedOp ":"
+        ret <- D.parseDeclaration
+        s <- P.getPosition
+        L.reservedOp "do"
+        exprs <- P.many (parseExpression <* P.optionMaybe L.semi)
+        L.reserved "end"
+        e <- P.getPosition
+        return (Just ret, C.Located (s, e) (C.Sequence exprs)),
+      do
+        body <- parseExpression
+        return (Nothing, body)
+    ]
+  return $ C.Function (C.Annoted name ret) generics args body
 
 parsePublic :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parsePublic parseExpression = L.locate $ do
