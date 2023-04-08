@@ -6,6 +6,7 @@ import Data.List
 import System.Environment
 import GHC.IO
 import System.FilePath
+import Data.List.Utils
 
 rttiName :: String
 rttiName = "Value"
@@ -17,7 +18,8 @@ reservedWords :: [String]
 reservedWords = ["auto", "else", "long", "switch", "break", "enum", "register", "typedef", "case", "extern", "return", "union", "char", "float", "short", "unsigned", "const", "for", "signed", "void", "continue", "goto", "sizeof", "volatile", "default", "if", "static", "while", "do", "int", "struct", "_Packed", "double"]
 
 varify :: String -> String
-varify n = if n `elem` reservedWords then n ++ "_" else n
+varify n = if n `elem` reservedWords then n' ++ "_" else n'
+  where n' = replace "::" "_" n
 
 instance Generation IRToplevel where
   generate (IRFunction name args body) = 

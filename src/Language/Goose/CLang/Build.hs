@@ -21,7 +21,7 @@ getCLangCompiler = do
       Nothing -> error "No C compiler found"
 
 generateDefinition :: String -> String
-generateDefinition name = "Value* " ++ name ++ "(Value* args);"
+generateDefinition name = "Value* " ++ varify name ++ "(Value* args);"
 
 build :: [ANFDefinition] -> String -> [String] -> [String] -> IO ()
 build ast file libraries headers = do
