@@ -39,7 +39,10 @@ instance Generation IRStructField where
 
 instance Generation IRStatement where
   generate (IRReturn e) = "return " ++ generate e ++ ";"
-  generate (IRIf e t f) = "if (" ++ generate e ++ "->b ) {" ++ unlines (map generate t) ++ "} else {" ++ unlines (map generate f) ++ "}"
+  generate (IRIfElse z@(IRBinary "&&" _ _) t f) = "if (" ++ generate z ++ ")" ++ " {" ++ unlines (map generate t) ++ "} else {" ++ unlines (map generate f) ++ "}"
+  generate (IRIfElse z@(IRBinary "||" _ _) t f) = "if (" ++ generate z ++ ")" ++ " {" ++ unlines (map generate t) ++ "} else {" ++ unlines (map generate f) ++ "}"
+  generate (IRIfElse e t f) = "if (" ++ generate e ++ "->b) {" ++ unlines (map generate t) ++ "} else {" ++ unlines (map generate f) ++ "}"
+  generate (IRIf e t) = "if (" ++ generate e ++ "->b) {" ++ unlines (map generate t) ++ "}"
   generate (IRWhile e s) = "while (" ++ generate e ++ "->b) {" ++ unlines (map generate s) ++ "}"
   generate (IRFor name e s) = do
     "for (Value* v = " ++ generate e ++ "; v != NULL && v->l.value != NULL; v = v->l.next) { Value* " ++ (varify name) ++ " = v->l.value; " ++  unlines (map generate s) ++ "}"
@@ -65,6 +68,8 @@ generateList xs = go xs
 instance Generation IRExpression where
   generate (IRVariable name) = varify name
   generate (IRApplication e args) = generate e ++ "(" ++ intercalate "," (map generate args) ++ ")"
+  generate (IRBinary "&&" e1 e2) = "(" ++ generate e1 ++ "->b && " ++ generate e2 ++ "->b)"
+  generate (IRBinary "||" e1 e2) = "(" ++ generate e1 ++ "->b || " ++ generate e2 ++ "->b)"
   generate (IRBinary op e1 e2) = "(" ++ generate e1 ++ " " ++ op ++ " " ++ generate e2 ++ ")"
   generate (IRUnary op e) = "(" ++ op ++ " " ++ generate e ++ ")"
   generate (IRLiteral l) = case l of
@@ -83,6 +88,7 @@ instance Generation IRExpression where
   generate (IRDictAccess e1 "$$fun") = generate e1 ++ "->$$fun"
   generate (IRDictAccess e1 e2) = "property_(" ++ generate e1 ++ ", " ++ show e2 ++ ")"
   generate (IRReference e) = "&" ++ generate e
+  generate (IRIn e1 s) = "Array_has(" ++ generate e1 ++ ", " ++ generate (IRLiteral (String s)) ++ ")"
 
 generateStruct :: [(String, IRExpression)] -> String
 generateStruct [] = "NULL"

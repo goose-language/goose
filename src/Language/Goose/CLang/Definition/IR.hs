@@ -17,7 +17,8 @@ data IRStructField
 
 data IRStatement 
   = IRReturn IRExpression
-  | IRIf IRExpression [IRStatement] [IRStatement]
+  | IRIfElse IRExpression [IRStatement] [IRStatement]
+  | IRIf IRExpression [IRStatement]
   | IRWhile IRExpression [IRStatement]
   | IRFor String IRExpression [IRStatement]
   | IRExpression IRExpression
@@ -41,6 +42,7 @@ data IRExpression
   | IRDict [(String, IRExpression)]
   | IRReference IRExpression
   | IRDictAccess IRExpression String
+  | IRIn IRExpression String
   deriving Eq
 
 type CType = String
