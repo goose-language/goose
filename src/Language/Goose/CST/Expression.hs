@@ -13,8 +13,9 @@ data Toplevel
   -- | A toplevel function declaration 
   -- | Of the form: def functionName(args) body end
   = Function { 
-      functionName :: Name,
-      functionArgs :: [String],
+      functionName :: Annoted (Maybe Declaration),
+      functionGenerics :: [String],
+      functionArgs :: [Annoted (Maybe Declaration)],
       functionBody :: Located Expression }
 
   -- | A toplevel public declaration
@@ -70,12 +71,13 @@ data Expression
   -- | A lambda abstraction, used to represent a function that takes arguments
   -- | Of the form: fun(x₀, x₁, ..., xₙ) e
   | Lambda { 
-      lambdaArgs :: [String],
+      lambdaArgs :: [Annoted (Maybe Declaration)],
+      lambdaReturn :: Maybe Declaration,
       lambdaBody :: Located Expression }
 
   -- | A let expression, used to represent a local binding
   -- | Of the form: let x: t = e₁ in e₂
-  | Let String (Located Expression) (Located Expression)
+  | Let (Annoted (Maybe Declaration)) (Located Expression) (Located Expression)
   
   -- | A pattern match expression, used to represent a case expression
   -- | Of the form: match e { p₀ = e₀, p₁ = e₁, ..., pₙ = eₙ }
@@ -117,7 +119,7 @@ data Expression
   -- | A for loop expression
   -- | Of the form: for x: t = e₁ to e₂ e₃
   | For {
-      forVariable :: String,
+      forVariable :: Annoted (Maybe Declaration),
       forIn :: Located Expression,
       forBody :: [Located Expression] }
   
@@ -140,7 +142,7 @@ data Updated
   deriving Eq
 
 instance Show Toplevel where
-  show (Function name args body) = "def " ++ name ++ "(" ++ intercalate ", " args ++ ")" ++ show body ++ " end"
+  show (Function name gens args body) = "def " ++ show name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ ")" ++ show body ++ " end"
   show (Public toplevel) = "public " ++ show toplevel
   show (Enumeration name gens members) = "enum " ++ name ++ show gens ++ " { " ++ intercalate ", " (map (\(Annoted name' tys) -> if null tys then name' else name' ++ "(" ++ intercalate ", " (map show tys) ++ ")") members) ++ " }"
   show (Namespace name body) = "module " ++ name ++ " " ++ intercalate "; " (map show body) ++ " end"
@@ -160,14 +162,14 @@ instance Show Expression where
   show (List expressions) = "[" ++ intercalate ", " (map show expressions) ++ "]"
   show (ListAccess list index) = show list ++ "[" ++ show index ++ "]"
   show (While condition body) = "while " ++ show condition ++ " " ++ show body
-  show (For variable inExpr body) = "for " ++ variable ++ " in " ++ show inExpr ++ " " ++ show body
+  show (For variable inExpr body) = "for " ++ show variable ++ " in " ++ show inExpr ++ " " ++ show body
   show (If condition then_ else_) = "if " ++ show condition ++ " then " ++ show then_ ++ " else " ++ show else_
   show (Update variable expression) = show variable ++ " = " ++ show expression
   show (Binary op left right) = show left ++ " " ++ op ++ " " ++ show right
   show (Return expression) = "return " ++ show expression
   show (Structure fields) = "{" ++ intercalate ", " (map (\(name, expression) -> name ++ " = " ++ show expression) fields) ++ "}"
   show (StructureAccess structure field) = show structure ++ "." ++ field
-  show (Lambda args body) = "fun(" ++ intercalate ", " args ++ ") " ++ show body
+  show (Lambda args ret body) = "fun(" ++ intercalate ", " (map show args) ++ "): " ++ show ret ++ "do " ++ show body ++ " end"
 
 instance Show Updated where
   show (VariableUpdate name) = show name
