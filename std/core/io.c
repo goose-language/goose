@@ -37,7 +37,7 @@ Value* IO_readDirectory(Value* args) {
 }
 
 Value* getVariantArguments(Value* dict) {
-  Value *result = emptyList();
+  Value *result = NULL;
   while (dict != NULL) {
     if (dict->s.value == NULL) break;
     if (strcmp(dict->s.name, "type") != 0 && strcmp(dict->s.name, "$$enum") != 0) {
