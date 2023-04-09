@@ -88,7 +88,7 @@ analyseToplevel (Declare name gens decl ret :>: pos) = do
 analyseToplevel (Public toplevel :>: pos) = map (Located pos . Public) <$> analyseToplevel toplevel
 analyseToplevel (Enumeration name gens decls :>: pos) = do
   name' <- createName name
-  ST.modify $ \s -> s { types = M.insert name' name (types s) }
+  ST.modify $ \s -> s { types = M.insert name' name' (types s) }
   decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM (`resolveImportedType` pos) ty) decls
   let declsNames = zip (map C.annotedName decls') (map C.annotedName decls')
   ST.modify $ \s -> s { mappings = M.union (M.fromList declsNames) (mappings s) }
