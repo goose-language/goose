@@ -119,7 +119,7 @@ convertExpression (EApplication (EVariable x) args) = do
 convertExpression (EApplication f args) = do
   f' <- convertExpression f
   args' <- mapM convertExpression args
-  return $ EApplication (EStructAccess (EStructAccess f' "$$func") "$$fun") args'
+  return $ EApplication (EStructAccess (EStructAccess f' "$$func") "$$fun") (EStructAccess f' "env" : args')
 convertExpression (EIf cond t f) = do
   cond' <- convertExpression cond
   t' <- convertExpression t
