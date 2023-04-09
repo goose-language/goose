@@ -12,6 +12,7 @@ makeUnaryOp s = foldr1 (.) . reverse <$> some s
 parseDeclaration :: Monad m => L.Parser m D.Declaration
 parseDeclaration = E.buildExpressionParser table $ P.choice [
     parsePrimitive,
+    parseStructure,
     parseFunction,
     parseList,
     parseNamespaced
@@ -23,6 +24,15 @@ parseDeclaration = E.buildExpressionParser table $ P.choice [
     application = do
       args <- L.brackets $ L.commaSep parseDeclaration
       return $ \x -> D.Constructor x args
+
+parseStructure :: Monad m => L.Parser m D.Declaration
+parseStructure = do
+  fields <- L.braces $ L.commaSep $ do
+    name <- L.identifier
+    L.reservedOp ":"
+    ty <- parseDeclaration
+    return (name, ty)
+  return $ D.Structure fields
 
 parsePrimitive :: Monad m => L.Parser m D.Declaration
 parsePrimitive = P.choice [
@@ -51,7 +61,7 @@ isCapitalized _ = False
 
 parseNamespaced :: Monad m => L.Parser m D.Declaration
 parseNamespaced =  do
-  names <- P.sepBy1 L.identifier (L.reservedOp "::")
+  names <- P.try (P.sepBy1 L.identifier (L.reservedOp "::")) P.<|> (:[]) <$> L.identifier
   case names of 
     [name] -> return $ if isCapitalized name then D.ID (D.Simple name) else D.Generic name
     _ -> return . D.ID $ D.Namespaced (init names) (last names)

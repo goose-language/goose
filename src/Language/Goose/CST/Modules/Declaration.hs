@@ -30,6 +30,10 @@ data Declaration
   -- | Of the form: fun(α, β): γ
   | Function [Declaration] Declaration
 
+  -- | A structure type, used to represent a type constructor
+  -- | Of the form: { x: α, y: β }
+  | Structure [(Name, Declaration)]
+
   -- | Some basic primitive types
   | Int | Float | Bool | Char | Unit
   deriving Eq
@@ -45,4 +49,5 @@ instance Show Declaration where
   show (Generic x) = x
   show (Constructor x xs) = show x ++ "[" ++ intercalate ", " (map show xs) ++ "]"
   show (Function xs x) = "fun(" ++ intercalate ", " (map show xs) ++ "): " ++ show x
+  show (Structure xs) = "{" ++ intercalate ", " (map (\(x, y) -> x ++ ": " ++ show y) xs) ++ "}"
   
