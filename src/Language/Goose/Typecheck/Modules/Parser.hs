@@ -41,5 +41,8 @@ instance Parser D.Declaration where
             t <- go ret env
             return $ ts T.:-> t
           go (D.List v) env = T.TApp (T.TId "List") . (:[]) <$> go v env
+          go (D.Structure xs) env = do
+            ts <- mapM (flip go env . snd) xs
+            return (T.TRec (zip (map fst xs) ts))
           go _ _ = undefined
   from = undefined
