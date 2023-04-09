@@ -83,8 +83,13 @@ inferExpression (C.Located pos (C.Let (C.Annoted name t) value body)) = do
   (t'', e'') <- withVariable (name, scheme) $ inferExpression body
   ST.modify $ \s' -> s' { variables = M.insert name scheme (variables s') }
   return (t'', A.Let (name C.:@ tv) e' e'')
-inferExpression (C.Located _ (C.Sequence exprs)) = do
+inferExpression (C.Located pos (C.Sequence exprs)) = do
+  ret <- ST.gets returnType
+  tv <- fresh
+  ST.modify (\s -> s { returnType = tv })
   (t1, es) <- L.unzip <$> local' (CM.forM exprs inferExpression)
+  unify (makeType t1 :~: tv, pos)
+  ST.modify (\s -> s { returnType = ret })
   return (makeType t1, A.Sequence es)
 inferExpression (C.Located pos (C.List exprs)) = do
   tv <- fresh
@@ -306,7 +311,7 @@ inferToplevel (C.Located pos (C.Declare name gens args ret)) = do
 inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
   generics'' <- mapM (const fresh) generics'
   let env = M.fromList $ zip generics' generics''
-  let header = TApp (TId name) generics''
+  let header = if null generics'' then TId name else TApp (TId name) generics''
 
   constructors' <- mapM (\(C.Annoted name' args) -> do
     args' <- mapM (flip toWithEnv env) args

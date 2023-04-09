@@ -29,13 +29,7 @@ solve ((Field f t1 t2, pos):xs) = do
             Right s1' -> do
               s2 <- solve $ map (BF.first (apply s1')) xs
               return $ s1' `compose` s2
-        Nothing -> do
-          s1 <- mgu t2 (TRec ((f, t1):fields))
-          case s1 of
-            Left err -> E.throwError (err, Nothing, pos)
-            Right s1' -> do
-              s2 <- solve $ map (BF.first (apply s1')) xs
-              return $ s1' `compose` s2
+        Nothing -> E.throwError ("Field " ++ f ++ " not found in record type", Nothing, pos)
     TVar _ -> do
       s1 <- mgu t2 (TRec [(f, t1)])
       case s1 of
