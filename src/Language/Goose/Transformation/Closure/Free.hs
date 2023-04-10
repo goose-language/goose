@@ -22,7 +22,7 @@ instance Free a => Free (b, a) where
   free = free . snd
 
 instance Free ANFExpression where
-  free (EVariable x) = S.singleton x
+  free (EVariable x _) = S.singleton x
   free (EApplication f args) = free f `S.union` free args
   free (EIf cond t f) = free cond `S.union` free t `S.union` free f
   free (EList xs) = free xs
@@ -46,7 +46,7 @@ instance Free ANFStatement where
   free (SReturn e) = free e
   free SBreak = S.empty
   free SContinue = S.empty
-  free (SMatch e cases) = free e `S.union` S.unions (map (\(p, b) -> free b S.\\ free p) cases)
+  free (SMatch e cases) = free e `S.union` S.unions (map (\(p, b) -> freeBodyExcl b (free p)) cases)
 
 instance Free T.Pattern where
   free (T.PVariable x _) = S.singleton x
@@ -62,7 +62,6 @@ instance Free ANFDefinition where
   free (DExtern _) = S.empty
   free (DDeclare _) = S.empty
 
-
 instance Free ANFUpdated where
   free (UVariable x) = S.singleton x
   free (UListAccess x u) = free x `S.union` free u
@@ -75,3 +74,10 @@ freeBody body = fst $ foldl (\(acc, excluded) -> \case
       (acc `S.union` free e S.\\ S.singleton n, excluded `S.union` S.singleton n)
     x -> 
       (acc `S.union` free x S.\\ excluded, excluded)) (S.empty, S.empty) body
+
+freeBodyExcl :: [ANFStatement] -> S.Set String -> S.Set String
+freeBodyExcl body excl = fst $ foldl (\(acc, excluded) -> \case
+    SLet n e -> 
+      (acc `S.union` free e S.\\ S.singleton n, excluded `S.union` S.singleton n)
+    x -> 
+      (acc `S.union` free x S.\\ excluded, excluded)) (S.empty, excl) body
