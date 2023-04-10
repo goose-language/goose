@@ -37,15 +37,17 @@ Value* IO_readDirectory(Value* args) {
 }
 
 Value* getVariantArguments(Value* dict) {
-  Value *result = NULL;
+  Value *result = malloc(sizeof(Value));
+  Value *container = result;
   while (dict != NULL) {
-    if (dict->s.value == NULL) break;
     if (strcmp(dict->s.name, "type") != 0 && strcmp(dict->s.name, "$$enum") != 0) {
-      result = push(result, dict->s.value);
+      result->l.value = dict->s.value;
+      result->l.next = malloc(sizeof(Value));
+      result = result->l.next;
     }
     dict = dict->s.next;
   }
-  return result;
+  return container;
 }
 
 Value* IO_print(Value *args)
@@ -110,7 +112,7 @@ Value* IO_print(Value *args)
       while (varArgs != NULL) {
         if (varArgs->l.value == NULL) break;
         IO_print(list(varArgs->l.value, NULL));
-        if (varArgs->l.next != NULL) {
+        if (varArgs->l.next != NULL && varArgs->l.next->l.value != NULL) {
           printf(", ");
         }
         varArgs = varArgs->l.next;
