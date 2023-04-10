@@ -6,6 +6,7 @@ import qualified Language.Goose.CST.Located as C
 import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Language.Goose.Parser.Lexer as L
+import qualified Language.Goose.CST.Modules.Declaration as D
 
 import qualified Language.Goose.Parser.Modules.Toplevel as T
 import qualified Language.Goose.Parser.Modules.Declaration as D
@@ -83,7 +84,10 @@ parseLiteral = P.choice [
 stringLiteral :: Monad m => L.Goose m C.Expression -> L.Goose m C.Expression
 stringLiteral p = L.lexeme $ do
   _ <- P.char '"'
-  (c:cs) <- P.many1 $ (P.string "{" *> p <* P.string "}") P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)
+  (c:cs) <- P.many1 $ (P.string "{" *> p <* P.string "}" 
+              >>= \x@(C.Located pos _) -> 
+                return (C.Application (C.Variable (D.Namespaced ["String"] "from") C.:>: pos) [x] C.:>: pos)) 
+            P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)
   _ <- P.char '"'
   return $ foldl (\acc x@(C.Located pos _) -> C.Binary "+" acc x C.:>: pos) c cs
 
