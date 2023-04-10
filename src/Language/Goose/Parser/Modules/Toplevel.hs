@@ -10,6 +10,7 @@ import qualified Language.Goose.Parser.Modules.Declaration as D
 -- Toplevel parser entry
 parseToplevel :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseToplevel parseExpression = P.choice [
+    parseType,
     parseEnumeration,
     parseModule parseExpression,
     parseDeclare,
@@ -28,6 +29,15 @@ parseEnumeration = L.locate $ do
   values <- P.many (C.Annoted <$> L.identifier <*> P.option [] (L.parens (L.commaSep D.parseDeclaration)))
   L.reserved "end"
   return $ C.Enumeration name generics values
+
+parseType :: Monad m => L.Goose m C.Toplevel
+parseType = L.locate $ do
+  L.reserved "type"
+  name <- L.capitalized
+  generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
+  L.reservedOp "="
+  body <- D.parseDeclaration
+  return $ C.Type name generics body
 
 parseFunction :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseFunction parseExpression = L.locate $ do

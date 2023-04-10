@@ -15,12 +15,12 @@ parseNamespaced = P.try (do
 
 parsePattern :: Monad m => L.Goose m C.Pattern
 parsePattern = P.choice [
+    parseWildcard,
     P.try parseConstructor,
     parseVariable,
     parseLiteral,
     parseList,
-    parseStructure,
-    parseWildcard
+    parseStructure
   ]
 
 parseVariable :: Monad m => L.Goose m C.Pattern
