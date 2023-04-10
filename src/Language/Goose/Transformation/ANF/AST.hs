@@ -17,7 +17,7 @@ instance Show ANFUpdated where
   show (UStructAccess updated name) = show updated ++ "." ++ name
 
 data ANFExpression 
-  = EVariable String
+  = EVariable String Type
   | ELiteral Literal
   | EApplication ANFExpression [ANFExpression]
   | EBinary String ANFExpression ANFExpression
@@ -32,7 +32,7 @@ data ANFExpression
   deriving Eq
 
 instance Show ANFExpression where
-  show (EVariable name) = name
+  show (EVariable name _) = name
   show (ELiteral literal) = show literal
   show (EApplication expr exprs) = show expr ++ "(" ++ intercalate ", " (map show exprs) ++ ")"
   show (EBinary op expr1 expr2) = show expr1 ++ " " ++ op ++ " " ++ show expr2

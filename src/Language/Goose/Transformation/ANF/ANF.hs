@@ -13,7 +13,11 @@ import Language.Goose.Transformation.ANF.Monad
 anfTL :: MonadANF m => T.Toplevel -> m ([(String, A.ANFExpression)], A.ANFDefinition)
 anfTL (T.Function name args _ expr) = do
   (lets, expr') <- anfStmt expr
-  return $ ([], A.DFunction name (map C.annotedName args) (createLet lets ++ expr'))
+  expr <- case last expr' of
+    A.SReturn _ -> return expr'
+    A.SExpression e -> return $ init expr' ++ [A.SReturn e]
+    _ -> return $ expr' ++ [A.SReturn $ A.ELiteral C.Unit]
+  return $ ([], A.DFunction name (map C.annotedName args) (createLet lets ++ expr))
 anfTL (T.Declaration name _ expr) = do
   (lets, expr') <- anfExpr expr
   return $ (lets, A.DDeclaration name expr')
@@ -54,22 +58,22 @@ anfStmt (T.Sequence exprs) = do
   return $ ([], concat $ zipWith (\let' expr -> createLet let' ++ expr) lets exprs)
 anfStmt (T.Match expr cases) = do
   (lets, expr) <- anfExpr expr
-  (lets', cases) <- unzip <$> mapM (\(pattern, body) -> do
+  cases <- mapM (\(pattern, body) -> do
     (lets, body) <- anfStmt body
-    return (lets, (pattern, body))) cases
-  return $ (lets ++ concat lets', [A.SMatch expr cases])
+    return (pattern, createLet lets ++ body)) cases
+  return $ (lets, [A.SMatch expr cases])
 anfStmt e = do
   (lets, e) <- anfExpr e
   return $ (lets, [A.SExpression e])
 
 anfExpr :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], A.ANFExpression)
 anfExpr (T.Literal lit) = return ([], A.ELiteral lit)
-anfExpr (T.Variable name _) = return ([], A.EVariable name)
-anfExpr (T.Application z@(T.Application _ _) args') = do
-  n <- fresh
-  (lets, z) <- anfExpr z
-  (lets', args') <- unzip <$> mapM anfExpr args'
-  return $ (lets ++ [(n, z)] ++ concat lets', A.EApplication (A.EVariable n) args')
+anfExpr (T.Variable name t) = return ([], A.EVariable name t)
+-- anfExpr (T.Application z@(T.Application _ _) args') = do
+--   n <- fresh
+--   (lets, z) <- anfExpr z
+--   (lets', args') <- unzip <$> mapM anfExpr args'
+--   return $ (lets ++ [(n, z)] ++ concat lets', A.EApplication (A.EVariable n) args')
 anfExpr (T.Application func args) = do
   (lets, func) <- anfExpr func
   (lets', args) <- unzip <$> mapM anfExpr args
@@ -128,11 +132,23 @@ anfExpr (T.StructureAccess struct field) = do
   return $ (lets, A.EStructAccess struct field)
 anfExpr (T.Match expr cases) = do
   (lets, expr) <- anfExpr expr
-  (lets', cases) <- unzip <$> mapM (\(pattern, body) -> do
-    (lets, body) <- anfStmt body
-    return (lets, (pattern, body))) cases
-  return $ (lets ++ concat lets', embed $ createLet (concat lets') ++ [A.SMatch expr cases])
-anfExpr x = error $ "Not implemented: " ++ show x
+  cases <- mapM (\(pattern, body) -> do
+    let body' = case body of
+          T.Return e -> T.Return e
+          e -> T.Return e
+    (lets, body) <- anfStmt body'
+    return (pattern, createLet lets ++ body)) cases
+  return $ (lets, embed $ [A.SMatch expr cases])
+anfExpr (T.Return e) = anfExpr e
+anfExpr (T.For name list body) = do
+  (lets, list) <- anfExpr list
+  (lets'', body) <- unzip <$> mapM anfStmt body
+  return $ ([], embed $ createLet lets ++ [A.SFor (C.annotedName name) list (createLet (concat lets'') ++ concat body)])
+anfExpr (T.While cond body) = do
+  (lets, cond) <- anfExpr cond
+  (lets', body) <- unzip <$> mapM anfStmt body
+  return $ ([], embed $ createLet lets ++ [A.SWhile cond (createLet (concat lets') ++ concat body)])
+
 
 anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFUpdated)
 anfUpdated (T.VariableUpdate name _) = return ([], A.UVariable name)
