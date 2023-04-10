@@ -14,11 +14,11 @@ languageDef =
             , Token.commentLine     = "//"
             , Token.nestedComments  = True
             , Token.caseSensitive   = True
-            , Token.identStart      = letter 
+            , Token.identStart      = letter <|> char '_'
             , Token.opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
             , Token.opStart         = Token.opLetter languageDef
             , Token.identLetter     = alphaNum <|> char '_' <|> char '\''
-            , Token.reservedNames   = ["enum", "end", "public", "module", "def", "for", "in", "do", "while", "break", "if", "then", "else", "import", "extern", "return", "declare", "fun", "match"]
+            , Token.reservedNames   = ["enum", "end", "public", "module", "def", "for", "in", "do", "while", "break", "if", "then", "else", "import", "extern", "return", "declare", "fun", "match", "type"]
             , Token.reservedOpNames = ["(", ")", "*", "+", "-", "/", "{", "}", "[", "]", "<", ">", "=", "->", "::"] }
 
 lexer :: Monad m => Token.GenTokenParser String u m

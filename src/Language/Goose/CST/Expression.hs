@@ -18,6 +18,13 @@ data Toplevel
       functionArgs :: [Annoted (Maybe Declaration)],
       functionBody :: Located Expression }
 
+  -- | A toplevel type declaration
+  -- | Of the form: type typeName = typeConstructor
+  | Type {
+      typeName :: Name,
+      typeGenerics :: [String],
+      typeConstructor :: Declaration }
+
   -- | A toplevel public declaration
   -- | Of the form: pub declaration
   | Public (Located Toplevel)
@@ -142,6 +149,7 @@ data Updated
 instance Show Toplevel where
   show (Function name gens args body) = "def " ++ show name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ ")" ++ show body ++ " end"
   show (Public toplevel) = "public " ++ show toplevel
+  show (Type name gens constructor) = "type " ++ name ++ show gens ++ " = " ++ show constructor
   show (Enumeration name gens members) = "enum " ++ name ++ show gens ++ " { " ++ intercalate ", " (map (\(Annoted name' tys) -> if null tys then name' else name' ++ "(" ++ intercalate ", " (map show tys) ++ ")") members) ++ " }"
   show (Namespace name body) = "module " ++ name ++ " " ++ intercalate "; " (map show body) ++ " end"
   show (Extern name gens decls ret) = "extern " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show decls) ++ "): " ++ show ret
