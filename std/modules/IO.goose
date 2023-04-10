@@ -29,5 +29,6 @@ public module IO
   def throw(message: string): nil do
     IO::println(message)
     IO::exit(1)
+    return nil
   end
 end
