@@ -4,6 +4,7 @@ module Language.Goose.Transformation.Closure.Hoisting where
 import Language.Goose.Transformation.ANF.AST
 import Language.Goose.CST.Annoted
 import Control.Monad.RWS
+import Language.Goose.Typecheck.Definition.Type
 
 type MonadHoist m = (MonadRWS () [ANFDefinition] Int m)
   
@@ -74,11 +75,11 @@ convertExpression (ELambda args body) = do
   name <- freshName
   body' <- mapM convertStatement body
   tell [DFunction name args body']
-  return $ EVariable name
+  return $ EVariable name (TId "Value")
 convertExpression (EListAccess arr idx) = EListAccess <$> convertExpression arr <*> convertExpression idx
 convertExpression (EStructAccess str name) = EStructAccess <$> convertExpression str <*> pure name
 convertExpression (EStructure xs) = EStructure <$> mapM (mapM convertExpression) xs
-convertExpression (EVariable x) = return $ EVariable x
+convertExpression (EVariable x t) = return $ EVariable x t
 convertExpression (EBinary op e1 e2) = EBinary op <$> convertExpression e1 <*> convertExpression e2
 convertExpression (EUnary op e) = EUnary op <$> convertExpression e
 convertExpression (EUpdate updated e) = EUpdate updated <$> convertExpression e
