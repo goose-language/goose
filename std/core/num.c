@@ -3,9 +3,16 @@
 #include "num.h"
 #include "error.h"
 #include "type.h"
+#include "conversion.h"
 
 Value *add(Value *a, Value *b) {
-  if (a->type == INT && b->type == INT) {
+  if (a == NULL) {
+    return b;
+  } else if (b == NULL) {
+    return a;
+  } else if (a == NULL && b == NULL) {
+    throwError("Tried to add NULL values");
+  } else if (a->type == INT && b->type == INT) {
     return integer(a->i + b->i);
   } else if (a->type == FLOAT && b->type == FLOAT) {
     return floating(a->f + b->f);
@@ -15,24 +22,16 @@ Value *add(Value *a, Value *b) {
     return floating(a->f + b->i);
   } else if (a->type == LIST && b->type == LIST) {
     Value *a0 = (Value*) malloc(sizeof(Value));
-    if (a->l.value == NULL) {
-      memcpy(a0, b, sizeof(Value));
-      return a0;
-    } else {
-      memcpy(a0, a, sizeof(Value));
-      Value* tmp = a0;
-      while (tmp->l.next != NULL)
-      {
-        tmp = tmp->l.next;
-      }
-      tmp->l.next = b;
-    }
+    a0->type = LIST;
+    a0->l.value = a->l.value;
+    a0->l.next = add(a->l.next, b);
 
     return a0;
   } else if (a->type == UNIT && b->type == UNIT) {
     return unit();
   } else {
-    throwError("Cannot add values of different types");
+    printf("Cannot add values of different types (between %s and %s)\n", toString(Type_of(list(a, NULL))), toString(Type_of(list(b, NULL))));
+    throwError("Tried to add values of different types");
   }  
 }
 
