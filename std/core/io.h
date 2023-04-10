@@ -13,4 +13,6 @@ Value* IO_readFile(Value* path);
 Value* IO_input(Value* prompt);
 Value* IO_writeFile(Value* args);
 
+Value* getVariantArguments(Value* args);
+
 #endif

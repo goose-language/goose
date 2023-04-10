@@ -171,32 +171,6 @@ void update(Value* v, Value* value) {
   }
 }
 
-void freeValue(Value* v) {
-  if (v == NULL) throwError("expected value, got NULL");
-  switch (v->type) {
-    case INT:
-      break;
-    case FLOAT:
-      break;
-    case CHAR:
-      break;
-    case LIST:
-      freeValue(v->l.value);
-      freeValue(v->l.next);
-      break;
-    case STRUCT:
-      free(v->s.name);
-      freeValue(v->s.value);
-      freeValue(v->s.next);
-      break;
-    case UNIT:
-      break;
-    case BOOL:
-      break;
-  }
-  free(v);
-}
-
 void IO_exit(Value* args) {
   Value* v = index_(args, 0);
   if (v == NULL) {
