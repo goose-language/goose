@@ -1,12 +1,16 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE StandaloneDeriving #-}
 module Language.Goose.CST.Located where
 import Text.Parsec.Pos ( SourcePos ) 
 
 type Position = (SourcePos, SourcePos)
 
 data Located a = Located { loc :: Position, unLoc :: a }
-  deriving (Eq, Ord, Functor)
+
+instance Eq a => Eq (Located a) where
+  Located _ x == Located _ y = x == y
 
 pattern (:>:) :: a -> Position -> Located a
 pattern a :>: pos = Located pos a
