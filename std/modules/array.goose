@@ -21,21 +21,19 @@ public module Array
     end
     return acc
   end
-  
-  def map[a, b](arr: [a], f: fun(a): b): [b] do
-    if Array::empty(arr) then return []
-    def acc = Array::create(Array::length(arr), arr[0])
-    def i = 0
-    for item in arr do
-      acc[i] = f(item)
-      i = i + 1
-    end
-    return acc
-  end
-  
+
   def push[a](arr: [a], value: a): nil do
     arr = Array::concat(arr, [value])
     return nil
+  end
+  
+  def map[a, b](arr: [a], f: fun(a): b): [b] do
+    if Array::empty(arr) then return []
+    def acc = []
+    for item in arr do
+      Array::push(acc, f(item))
+    end
+    return acc
   end
 
   def slice[a](array: [a], idx: int): [a] do
