@@ -54,7 +54,7 @@ compileExpression :: ANFExpression -> IRExpression
 compileExpression (EVariable name _) = IRVariable name
 compileExpression (ELiteral l) = IRLiteral l
 compileExpression (EApplication (EVariable "makeLambda" _) [lambda]) = IRApplication (IRVariable "makeLambda") [compileExpression lambda]
-compileExpression (EApplication (EVariable "freeValue" _) [value]) = IRApplication (IRVariable "freeValue") [compileExpression value]
+compileExpression (EApplication (EVariable "free" _) [value]) = IRApplication (IRVariable "free") [compileExpression value]
 compileExpression (EApplication e args) = IRApplication (compileExpression e) [IRList (map compileExpression args)]
 compileExpression (EBinary op e1 e2) = case op of
   "+" -> IRApplication (IRVariable "add") [compileExpression e1, compileExpression e2]
