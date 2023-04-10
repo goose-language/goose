@@ -11,6 +11,7 @@ import Language.Goose.Transformation.Closure.Hoisting
 import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.CLang.Build
 import Language.Goose.CLang.Definition.Generation
+import Language.Goose.Transformation.Garbage.Collector
 import System.Environment
 import Data.List
 
@@ -46,6 +47,7 @@ main = do
                       ast <- runANF ast
                       ast <- return $ runClosureConversion ast
                       ast <- return $ runHoisting ast
+                      ast <- return $ runCollector ast
                       let (libraries', headers) = unzip $ chunkBy2 libraries
                       build ast "main" (libraries' ++ includeLibrary) (includeHeaders ++ headers)
     _ -> putStrLn "Usage: goose <file> [libraries]"
