@@ -9,8 +9,8 @@ import qualified Language.Goose.Parser.Lexer as L
 
 import qualified Language.Goose.Parser.Modules.Toplevel as T
 import qualified Language.Goose.Parser.Modules.Declaration as D
-import qualified Language.Goose.Parser.Modules.Literal as L
 import qualified Language.Goose.Parser.Modules.Pattern as P
+import qualified Data.Functor as F
 
 import Control.Applicative
 
@@ -59,7 +59,7 @@ parseTerm = P.choice [
     parseObject,
     parseUpdate,
     parseMatch,
-    L.locate $ C.Literal <$> L.parseLiteral,
+    parseLiteral,
     parseVariable,
     parseList,
     parseLet,
@@ -69,6 +69,23 @@ parseTerm = P.choice [
     parseSequence,
     parseReturn
   ]
+
+parseLiteral :: Monad m => L.Goose m C.Expression
+parseLiteral = P.choice [
+    L.locate $ C.Literal <$> C.Int <$> L.integer,
+    L.locate $ C.Literal <$> C.Float <$> L.float,
+    L.locate $ C.Literal <$> C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
+    L.locate $ C.Literal <$> C.Char <$> L.charLiteral,
+    stringLiteral parseExpression,
+    L.locate $ C.Literal <$> (C.Unit <$ L.reserved "nil")
+  ]
+
+stringLiteral :: Monad m => L.Goose m C.Expression -> L.Goose m C.Expression
+stringLiteral p = L.lexeme $ do
+  _ <- P.char '"'
+  (c:cs) <- P.many1 $ (P.string "{" *> p <* P.string "}") P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)
+  _ <- P.char '"'
+  return $ foldl (\acc x@(C.Located pos _) -> C.Binary "+" acc x C.:>: pos) c cs
 
 parseMatch :: Monad m => L.Goose m C.Expression
 parseMatch = L.locate $ do
