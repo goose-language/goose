@@ -18,7 +18,7 @@ resolveImport :: MonadResolver m => String -> String -> Position -> m [Located T
 resolveImport dir name pos = do
   let stdPath = getGoosePath
   let stdName = stdPath </> name
-  let path = if startsWith "std" name then stdName else dir </> name
+  let path = if startsWith "std" name then stdName else name
 
   fileExists <- liftIO $ doesFileExist path
   if not fileExists

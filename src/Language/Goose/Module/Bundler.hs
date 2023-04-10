@@ -87,12 +87,27 @@ analyseToplevel (Declare name gens decl ret :>: pos) = do
   return [Declare name' gens decl' ret' :>: pos]
 analyseToplevel (Public toplevel :>: pos) = map (Located pos . Public) <$> analyseToplevel toplevel
 analyseToplevel (Enumeration name gens decls :>: pos) = do
-  name' <- createName name
-  ST.modify $ \s -> s { types = M.insert name' name' (types s) }
+  (name', new) <- do
+    name' <- createName name
+    return (name', name')
+      
+  ST.modify $ \s -> s { types = M.insert name' new (types s) }
+
   decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM (`resolveImportedType` pos) ty) decls
   let declsNames = zip (map C.annotedName decls') (map C.annotedName decls')
   ST.modify $ \s -> s { mappings = M.union (M.fromList declsNames) (mappings s) }
-  return [Enumeration name' gens decls' :>: pos]
+
+  return [Enumeration new gens decls' :>: pos]
+analyseToplevel (Type name gens decls :>: pos) = do
+  (name', new) <- do
+    name' <- createName name
+    return (name', name')
+      
+  ST.modify $ \s -> s { types = M.insert name' new (types s) }
+
+  decls' <- resolveImportedType decls pos
+
+  return [Type new gens decls' :>: pos]
 analyseToplevel x = return [x]
 
 keepPublic :: [Located (Toplevel)] -> [Located (Toplevel)]
@@ -148,6 +163,9 @@ resolveImportedType (D.Function args ret) pos = do
   args' <- mapM (`resolveImportedType` pos) args
   ret' <- resolveImportedType ret pos
   return $ D.Function args' ret'
+resolveImportedType (D.Structure fields) pos = do
+  fields' <- mapM (mapM (`resolveImportedType` pos)) fields
+  return $ D.Structure fields'
 resolveImportedType x _ = return x
 
 resolveImportedMaybeType :: MonadBundling m => Maybe D.Declaration -> Position -> m (Maybe D.Declaration)
@@ -171,7 +189,8 @@ resolveImportedExpressions (Lambda args ret body :>: pos) = do
   tys <- mapM (`resolveImportedMaybeType` pos) $ map C.annotedType args
   body' <- local' (\s -> s { mappings = M.union (M.fromList $ zip names names) (mappings s) }) $ do
     resolveImportedExpressions body
-  return $ Lambda (zipWith C.Annoted names tys) ret body' :>: pos
+  ret' <- resolveImportedMaybeType ret pos
+  return $ Lambda (zipWith C.Annoted names tys) ret' body' :>: pos
 resolveImportedExpressions (If cond t f :>: pos) = do
   cond' <- resolveImportedExpressions cond
   t' <- resolveImportedExpressions t
