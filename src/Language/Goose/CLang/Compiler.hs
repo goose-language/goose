@@ -40,17 +40,21 @@ compileStatement (SLet name e) = IRDeclarationStatement name (compileExpression 
 compileStatement (SUpdate u e) = IRUpdate (compileUpdated u) (compileExpression e)
 compileStatement (SMatch e cases) = do
   let x = compileExpression e
+  let decl = IRDeclarationStatement "$$match" x
   let xs = map (\(p, b) -> do
           let b' = map compileStatement b
-          compileCase p x b') cases
-  createIfSequence xs
+          compileCase p (IRVariable "$$match") b') cases
+  IRBlock [
+      decl,
+      createIfSequence xs
+    ]
 
 
 compileExpression :: ANFExpression -> IRExpression
-compileExpression (EVariable name) = IRVariable name
+compileExpression (EVariable name _) = IRVariable name
 compileExpression (ELiteral l) = IRLiteral l
-compileExpression (EApplication (EVariable "makeLambda") [lambda]) = IRApplication (IRVariable "makeLambda") [compileExpression lambda]
-compileExpression (EApplication (EVariable "freeValue") [value]) = IRApplication (IRVariable "freeValue") [compileExpression value]
+compileExpression (EApplication (EVariable "makeLambda" _) [lambda]) = IRApplication (IRVariable "makeLambda") [compileExpression lambda]
+compileExpression (EApplication (EVariable "freeValue" _) [value]) = IRApplication (IRVariable "freeValue") [compileExpression value]
 compileExpression (EApplication e args) = IRApplication (compileExpression e) [IRList (map compileExpression args)]
 compileExpression (EBinary op e1 e2) = case op of
   "+" -> IRApplication (IRVariable "add") [compileExpression e1, compileExpression e2]

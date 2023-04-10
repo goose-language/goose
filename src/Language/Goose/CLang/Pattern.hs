@@ -21,13 +21,13 @@ findPattern (PVariable v _)  = do
   \e -> [(Just $ IRDeclarationStatement v e, Nothing)]
 findPattern (PConstructor n xs) = do
   \e -> do
-    let xs' = zipWith (\_ y -> findPattern y e) (["a" ++ show i | i <- [0..]]) xs
+    let xs' = zipWith (\x y -> findPattern y (IRDictAccess e x)) (["a" ++ show i | i <- [0..]]) xs
     concat ([(Nothing, Just $ IRApplication (IRVariable "eq") [IRDictAccess e "type", IRLiteral (String n)])] : xs')
 findPattern (PList pats) = do
   let pats' = map findPattern pats
   \x -> do
     let pats'' = zipWith (\i f -> f (IRListAccess x (IRLiteral $ Int i))) [0..] pats'
-    concat pats'' ++ [(Nothing, Just $ IRApplication (IRVariable "eq") [IRApplication (IRVariable "Array_length") [x], (IRLiteral $ Int $ toInteger $ length pats)])]
+    concat pats'' ++ [(Nothing, Just $ IRApplication (IRVariable "eq") [IRApplication (IRVariable "Array_length") [IRList [x]], (IRLiteral $ Int $ toInteger $ length pats)])]
 findPattern (PStructure fields) = do
   let args' = map (\(x, y) -> (x, findPattern y)) fields
   \e -> do
@@ -63,7 +63,7 @@ compileCase (PList pats) = do
           let f = findPattern y
           f (IRListAccess x (IRLiteral (Int i)))) [0..] pats
     let lets   = map (fromJust . fst) $ filter (isJust . fst) args_
-    let cond = IRApplication (IRVariable "eq") [IRApplication (IRVariable "Array_length") [x], IRLiteral (Int $ toInteger (length pats))]
+    let cond = IRApplication (IRVariable "eq") [IRApplication (IRVariable "Array_length") [IRList [x]], IRLiteral (Int $ toInteger (length pats))]
     let cs = map (fromJust . snd) $ filter (isJust . snd) args_
     let conds = createAnd $ cond : cs
       in IRIf conds (lets ++ b)
@@ -71,7 +71,7 @@ compileCase (PStructure fields) = do
   \x b -> do
     let args_ = concat $ map (\(n, y) -> do
           let f = findPattern y
-          f (IRDictAccess x n)) fields
+          f (IRDictAccess x n) ++ concatMap (\(x', _) -> [(Nothing, Just $ IRIn x x')]) fields ) fields
     let lets = map (fromJust . fst) $ filter (isJust . fst) args_
     let cs = map (fromJust . snd) $ filter (isJust . snd) args_
     let conds = createAnd cs
