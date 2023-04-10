@@ -12,6 +12,7 @@ import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.CLang.Build
 import Language.Goose.CLang.Definition.Generation
 import System.Environment
+import Data.List
 
 import qualified Log.Error as L
 
@@ -33,11 +34,11 @@ main = do
           case ast of
             Left err -> L.printError (fst err, Nothing, snd err) "Module resolution"
             Right ast' -> do
-              ast <- runModuleBundling ast'
+              ast <- runModuleBundling $ nub ast'
               case ast of
                 Left err -> L.printError (fst err, Nothing, snd err) "Module bundling"
                 Right ast' -> do
-                  ast <- performInfer ast'
+                  ast <- performInfer $ nub ast'
                   case ast of
                     Left err -> L.printError err "Type inference"
                     Right ast' -> do
