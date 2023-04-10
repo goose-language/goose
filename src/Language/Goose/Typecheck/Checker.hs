@@ -337,10 +337,22 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
     _ -> E.throwError ("Invalid constructor of enumeration", Nothing, pos)) constructors'
 
   return (Void, structures)
+inferToplevel (C.Located pos (C.Type name generics' decl)) = do
+  gens <- mapM (const fresh) generics'
+  let env = M.fromList $ zip generics' gens
+
+  decl' <- toWithEnv decl env
+  gens' <- mapM (\case 
+    TVar i -> return i
+    _ -> E.throwError ("Invalid generic", Nothing, pos)) gens
+
+  ST.modify $ \s -> s { aliases = M.insert name (Forall gens' decl') (aliases s) }
+
+  return (Void, [])
 inferToplevel (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 performInfer :: Monad m => [C.Located C.Toplevel] -> m (Either (String, Maybe String, C.Position) [A.Toplevel])
-performInfer toplevels = E.runExceptT $ concat <$> ST.evalStateT (mapM ((snd <$>) . inferToplevel) toplevels) (CheckerState 0 functions mempty [] mempty Void)
+performInfer toplevels = E.runExceptT $ concat <$> ST.evalStateT (mapM ((snd <$>) . inferToplevel) toplevels) (CheckerState 0 functions mempty [] mempty Void mempty)
 
 functions :: M.Map String Scheme
 functions = M.fromList [

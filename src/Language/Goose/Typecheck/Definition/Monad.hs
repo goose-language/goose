@@ -15,7 +15,8 @@ data CheckerState = CheckerState {
   types :: Map String Scheme,
   constraints :: [Constraint],
   generics :: Map String Type,
-  returnType :: Type
+  returnType :: Type,
+  aliases :: Map String Scheme
 }
 
 union' :: Environment -> Environment -> Environment

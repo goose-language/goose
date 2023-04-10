@@ -5,6 +5,8 @@ module Language.Goose.Typecheck.Modules.Parser where
 import qualified Language.Goose.Typecheck.Definition.Type as T
 import qualified Language.Goose.CST.Modules.Declaration as D
 import qualified Language.Goose.Typecheck.Definition.Monad as T
+import qualified Language.Goose.Typecheck.Modules.Substitution as U
+import qualified Control.Monad.State as ST
 import qualified Data.Map as M
 
 class Parser a where
@@ -22,15 +24,27 @@ instance Parser a => Parser (Maybe a) where
 instance Parser D.Declaration where
   toWithEnv = go
     where go :: T.MonadChecker m => D.Declaration -> M.Map String T.Type -> m T.Type
+          go (D.Constructor (D.ID (D.Simple v)) xs) env = do
+            aliases <- ST.gets T.aliases
+            xs' <- mapM (flip go env) xs
+            case M.lookup v aliases of
+              Just (T.Forall gens t) -> do
+                let env' = M.fromList (zip gens xs')
+                return (U.apply env' t)
+              Nothing -> return (T.TApp (T.TId v) xs')
           go (D.Constructor v xs) env = do
             t <- go v env
             ts <- mapM (flip go env) xs
-
+            
             return (T.TApp t ts)
           go (D.Generic v) env = case M.lookup v env of
             Just t -> return t
             Nothing -> T.fresh
-          go (D.ID (D.Simple v)) _ = return (T.TId v)
+          go (D.ID (D.Simple v)) _ = do
+            aliases <- ST.gets T.aliases
+            case M.lookup v aliases of
+              Just (T.Forall _ t) -> return t
+              Nothing -> return (T.TId v)
           go D.Int _ = return (T.Int)
           go D.Bool _ = return (T.Bool)
           go D.Float _ = return (T.Float)
@@ -44,5 +58,5 @@ instance Parser D.Declaration where
           go (D.Structure xs) env = do
             ts <- mapM (flip go env . snd) xs
             return (T.TRec (zip (map fst xs) ts))
-          go _ _ = undefined
+          go x _ = error $ "to: " ++ show x
   from = undefined
