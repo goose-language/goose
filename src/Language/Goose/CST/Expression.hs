@@ -63,8 +63,14 @@ data Toplevel
   | Declare {
       declareName :: Name,
       declareGenerics :: [String],
-      declareArgs :: [Declaration],
+      declareArgs :: Maybe [Declaration],
       declareReturn :: Declaration }
+
+  -- | An alone enumeration declaration
+  -- | Of the form: declare enum enumerationName n₁[α₀, ..., αₙ]
+  | EnumDeclare {
+      enumDeclareName :: Name,
+      enumDeclareGenerics :: [String] }
   deriving Eq
   
 data Expression
@@ -155,7 +161,9 @@ instance Show Toplevel where
   show (Extern name gens decls ret) = "extern " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show decls) ++ "): " ++ show ret
   show (Import name) = "import " ++ name
   show (ImportAs name alias) = "import " ++ name ++ " as " ++ alias
-  show (Declare name gens args ret) = "def " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ "): " ++ show ret
+  show (Declare name gens (Just args) ret) = "def " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ "): " ++ show ret
+  show (Declare name gens Nothing ret) = "def " ++ name ++ show gens ++ ": " ++ show ret
+  show (EnumDeclare name gens) = "declare enum " ++ name ++ show gens
 
 instance Show Expression where
   show (Variable name) = show name
