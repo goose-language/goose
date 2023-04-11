@@ -100,12 +100,12 @@ library
         Language.Goose.Transformation.Closure.Hoisting
 
         Language.Goose.Transformation.EtaExpansion
-        Language.Goose.Transformation.Garbage.Collector
 
         Language.Goose.CLang.Compiler
             Language.Goose.CLang.Definition.IR
             Language.Goose.CLang.Definition.Generation
         Language.Goose.CLang.Build
+        Language.Goose.CLang.Garbage
         Language.Goose.CLang.Pattern
 
     -- Modules included in this library but not exported.
