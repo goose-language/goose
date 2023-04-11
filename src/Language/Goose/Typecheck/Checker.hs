@@ -296,14 +296,16 @@ inferToplevel (C.Located pos (C.Extern name generics' decl ret)) = do
 inferToplevel (C.Located pos (C.Declare name gens args ret)) = do
   generics' <- mapM (const fresh) gens
   let env = M.fromList $ zip gens generics'
-  args' <- mapM (flip toWithEnv env) args
+  args' <- mapM (mapM (flip toWithEnv env)) args
   ret' <- toWithEnv ret env
 
   gens' <- mapM (\case 
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) generics'
 
-  let ty = if null args' then ret' else args' :-> ret'
+  let ty = case args' of
+        Nothing -> ret'
+        Just args'' -> args'' :-> ret'
   
   let scheme = Forall gens' ty
   ST.modify $ \s -> s { variables = M.insert name scheme (variables s) }
