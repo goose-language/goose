@@ -5,6 +5,8 @@
 #include "num.h"
 #include "conversion.h"
 #include "type.h"
+#include "garbage/tgc.h"
+#include "garbage.h"
 
 Value* index_(Value *v, int i) {
   if (v->type == LIST) {
@@ -95,7 +97,7 @@ Value* IO_clone(Value *args)
 {
   Value *v = index_(args, 0);
   
-  Value *c = (Value*) malloc(sizeof(Value));
+  Value *c = (Value*) tgc_alloc(gc(), sizeof(Value));
   if (v == NULL)
   {
     return NULL;

@@ -8,6 +8,8 @@
 #include "conversion.h"
 #include "error.h"
 #include <string.h>
+#include "garbage.h"
+#include "garbage/tgc.h"
 
 Value* IO_fileExists (Value *filename) {
   Value *v = index_(filename, 0);
@@ -37,12 +39,12 @@ Value* IO_readDirectory(Value* args) {
 }
 
 Value* getVariantArguments(Value* dict) {
-  Value *result = malloc(sizeof(Value));
+  Value *result = tgc_alloc(gc(), sizeof(Value));
   Value *container = result;
   while (dict != NULL) {
     if (strcmp(dict->s.name, "type") != 0 && strcmp(dict->s.name, "$$enum") != 0) {
       result->l.value = dict->s.value;
-      result->l.next = malloc(sizeof(Value));
+      result->l.next = tgc_alloc(gc(), sizeof(Value));
       result = result->l.next;
     }
     dict = dict->s.next;

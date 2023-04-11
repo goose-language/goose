@@ -4,6 +4,9 @@
 #include "error.h"
 #include "type.h"
 #include "conversion.h"
+#include "eq.h"
+#include "garbage.h"
+#include "garbage/tgc.h"
 
 Value *add(Value *a, Value *b) {
   if (a == NULL) {
@@ -21,7 +24,11 @@ Value *add(Value *a, Value *b) {
   } else if (a->type == FLOAT && b->type == INT) {
     return floating(a->f + b->i);
   } else if (a->type == LIST && b->type == LIST) {
-    Value *a0 = (Value*) malloc(sizeof(Value));
+    Value *a0 = (Value*) tgc_alloc(gc(), sizeof(Value));
+    if (eq(a, emptyList())->b) 
+      return b;
+    else if (eq(b, emptyList())->b)
+      return a;
     a0->type = LIST;
     a0->l.value = a->l.value;
     a0->l.next = add(a->l.next, b);
