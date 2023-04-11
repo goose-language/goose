@@ -1,0 +1,3 @@
+[submodule "std/core/garbage"]
+	path = std/core/garbage
+	url = https://github.com/orangeduck/tgc
