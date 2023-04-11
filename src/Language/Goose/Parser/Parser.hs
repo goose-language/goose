@@ -83,13 +83,17 @@ parseLiteral = P.choice [
 
 stringLiteral :: Monad m => L.Goose m C.Expression -> L.Goose m C.Expression
 stringLiteral p = L.lexeme $ do
+  s <- P.getPosition
   _ <- P.char '"'
-  (c:cs) <- P.many1 $ (P.string "{" *> p <* P.string "}" 
+  cs <- (P.many1 $ (P.string "{" *> p <* P.string "}" 
               >>= \x@(C.Located pos _) -> 
                 return (C.Application (C.Variable (D.Namespaced ["String"] "from") C.:>: pos) [x] C.:>: pos)) 
-            P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)
+            P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)) P.<|> return []
   _ <- P.char '"'
-  return $ foldl (\acc x@(C.Located pos _) -> C.Binary "+" acc x C.:>: pos) c cs
+  e <- P.getPosition
+  return $ case cs of
+    [] -> C.Literal (C.String "") C.:>: (s, e)
+    (c:cs') -> foldl (\acc x@(C.Located pos _) -> C.Binary "+" acc x C.:>: pos) c cs'
 
 parseMatch :: Monad m => L.Goose m C.Expression
 parseMatch = L.locate $ do
