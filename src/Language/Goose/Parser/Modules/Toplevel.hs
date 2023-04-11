@@ -13,6 +13,7 @@ parseToplevel parseExpression = P.choice [
     parseType,
     parseEnumeration,
     parseModule parseExpression,
+    P.try parseEnumDeclaration,
     parseDeclare,
     parseFunction parseExpression,
     parsePublic parseExpression,
@@ -20,6 +21,14 @@ parseToplevel parseExpression = P.choice [
     P.try parseImportAs,
     parseImport
   ]
+
+parseEnumDeclaration :: Monad m => L.Goose m C.Toplevel
+parseEnumDeclaration = L.locate $ do
+  L.reserved "declare"
+  L.reserved "enum"
+  name <- L.capitalized
+  generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
+  return $ C.EnumDeclare name generics
 
 parseEnumeration :: Monad m => L.Goose m C.Toplevel
 parseEnumeration = L.locate $ do
@@ -72,7 +81,7 @@ parseDeclare = L.locate $ do
   L.reserved "declare"
   name <- L.identifier
   gens <- P.option [] $ L.brackets $ L.commaSep (P.many1 P.lower)
-  args <- P.option [] $ L.parens (L.commaSep (P.optionMaybe (L.identifier >> L.reservedOp ":") *> D.parseDeclaration))
+  args <- P.optionMaybe $ L.parens (L.commaSep (P.optionMaybe (L.identifier >> L.reservedOp ":") *> D.parseDeclaration))
   L.reservedOp ":"
   value <- D.parseDeclaration
   return $ C.Declare name gens args value
