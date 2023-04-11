@@ -80,7 +80,9 @@ analyseToplevel (Extern name gens decl ret :>: pos) = do
   ST.modify $ \s -> s { mappings = M.insert name' name (mappings s) }
   return [Extern name gens decl' ret' :>: pos]
 analyseToplevel (Declare name gens decl ret :>: pos) = do
-  decl' <- mapM (`resolveImportedType` pos) decl
+  decl' <- case decl of
+    Just decl -> Just <$> mapM (`resolveImportedType` pos) decl
+    Nothing -> return Nothing
   ret' <- resolveImportedType ret pos
   name' <- createName name
   ST.modify $ \s -> s { mappings = M.insert name' name' (mappings s) }
@@ -108,6 +110,10 @@ analyseToplevel (Type name gens decls :>: pos) = do
   decls' <- resolveImportedType decls pos
 
   return [Type new gens decls' :>: pos]
+analyseToplevel (EnumDeclare name _ :>: _) = do
+  name' <- createName name
+  ST.modify $ \s -> s { types = M.insert name' name' (types s) }
+  return []
 analyseToplevel x = return [x]
 
 keepPublic :: [Located (Toplevel)] -> [Located (Toplevel)]
