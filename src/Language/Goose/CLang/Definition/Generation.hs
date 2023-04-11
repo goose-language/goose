@@ -26,7 +26,7 @@ instance Generation IRToplevel where
   generate (IRFunction name args body) = 
     if name == "main"
       then "int main(int argc, char **argv) { " ++ startGarbage (unlines (map generate body)) ++ "}"
-      else rttiName ++ "* " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
+      else rttiName ++ "* " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
   generate (IRDeclaration name e) = rttiName ++ "* " ++ (varify name) ++ " = " ++ generate e ++ ";"
   generate (IRExtern name _) = "extern " ++ rttiName ++ "* " ++ name ++ ";"
   generate (IRStruct name fields) = "struct " ++ (varify name) ++ " { " ++ unwords (map generate fields) ++ " };"
