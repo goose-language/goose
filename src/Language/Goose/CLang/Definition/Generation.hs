@@ -2,6 +2,7 @@
 module Language.Goose.CLang.Definition.Generation where
 import Language.Goose.CLang.Definition.IR
 import Language.Goose.CST.Literal
+import Language.Goose.CLang.Garbage
 import Data.List
 import System.Environment
 import GHC.IO
@@ -23,7 +24,9 @@ varify n = if n `elem` reservedWords then n' ++ "_" else n'
 
 instance Generation IRToplevel where
   generate (IRFunction name args body) = 
-    (if name == "main" then "int " else rttiName ++ "* ") ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
+    if name == "main"
+      then "int main(int argc, char **argv) { " ++ startGarbage (unlines (map generate body)) ++ "}"
+      else rttiName ++ "* " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ unlines (map generate body)  ++ "}"
   generate (IRDeclaration name e) = rttiName ++ "* " ++ (varify name) ++ " = " ++ generate e ++ ";"
   generate (IRExtern name _) = "extern " ++ rttiName ++ "* " ++ name ++ ";"
   generate (IRStruct name fields) = "struct " ++ (varify name) ++ " { " ++ unwords (map generate fields) ++ " };"
@@ -112,8 +115,11 @@ includeLibrary = do
   let rttiRegex = "std/core/regex.c"
   let rttiType = "std/core/type.c"
   let rttiError = "std/core/error.c"
+  let garbageTGC = "std/core/garbage/tgc.c"
+  let garbage = "std/core/garbage.c"
   
-  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType, rttiError]
+  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, 
+                          rttiRegex, rttiType, rttiError, garbageTGC, garbage]
 
 includeHeaders :: [String]
 includeHeaders = do
@@ -125,8 +131,10 @@ includeHeaders = do
   let rttiConv = "std/core/conversion.h"
   let rttiRegex = "std/core/regex.h"
   let rttiType = "std/core/type.h"
+  let garbageTGC = "std/core/garbage/tgc.h"
+  let garbage = "std/core/garbage.h"
 
-  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType]
+  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType, garbageTGC, garbage]
 
 generateHeaders :: [String] -> String
 generateHeaders = unlines . map (\x -> "#include \"" ++ x ++ "\"")
