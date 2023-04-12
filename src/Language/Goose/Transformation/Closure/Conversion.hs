@@ -126,7 +126,7 @@ convertExpression (EApplication (EVariable x _) args) = do
       return (call, concat stmts)
     else do
       (args', stmts) <- unzip <$> mapM convertExpression args
-      return (EApplication (EVariable x v) (args' ++ [EStructure [("$$func", ELiteral C.Unit), ("env", ELiteral C.Unit)]]), concat stmts)
+      return (EApplication (EVariable x v) (args' ++ [ELiteral C.Unit]), concat stmts)
 convertExpression (EApplication f args) = do
   (f', stmts1) <- convertExpression f
   (args', stmts2) <- unzip <$> mapM convertExpression args
