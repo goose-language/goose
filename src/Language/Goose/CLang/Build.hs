@@ -7,6 +7,7 @@ import System.FilePath
 import Language.Goose.CLang.Compiler
 import Language.Goose.Transformation.ANF.AST
 import Language.Goose.CLang.Definition.Generation
+import Control.Monad.State
 
 import Data.List
 
@@ -30,7 +31,9 @@ build ast file libraries headers = do
   let funs = getAllFunctions ast' \\ ["main"]
   let decls = unlines $ map generateDefinition funs
   
-  writeFile output $ unlines [generateHeaders headers, "#include <stdlib.h>", decls, generate ast']
+  let cOutput = evalState (generate ast') 0
+
+  writeFile output $ unlines [generateHeaders headers, "#include <stdlib.h>", decls, cOutput]
   compiler <- getCLangCompiler
   callProcess compiler $ libraries ++ [output] ++ ["-w", "-g"]
   -- putStrLn $ compiler ++ " " ++ unwords (libraries ++ [output] ++ ["-w", "-g"])
