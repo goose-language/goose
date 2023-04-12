@@ -10,6 +10,7 @@
 #include <string.h>
 #include "garbage.h"
 #include "garbage/tgc.h"
+#include "type.h"
 
 Value* IO_fileExists (Value *filename) {
   Value *v = index_(filename, 0);
@@ -39,22 +40,24 @@ Value* IO_readDirectory(Value* args) {
 }
 
 Value* getVariantArguments(Value* dict) {
-  Value *result = tgc_alloc(gc(), sizeof(Value));
-  Value *container = result;
-  while (dict != NULL) {
-    if (strcmp(dict->s.name, "type") != 0 && strcmp(dict->s.name, "$$enum") != 0) {
-      result->l.value = dict->s.value;
-      result->l.next = tgc_alloc(gc(), sizeof(Value));
-      result = result->l.next;
-    }
-    dict = dict->s.next;
+  Value *array = (Value*) tgc_alloc(gc(), sizeof(Value));
+  array->type = LIST;
+  Value **result = tgc_alloc(gc(), sizeof(Value*) * (dict->s.length - 2));
+  int j = 0;
+  for (int i = 0; i < dict->s.length; i++) {
+    if (strcmp(dict->s.elements[i]->name, "type") == 0) continue;
+    if (strcmp(dict->s.elements[i]->name, "$$enum") == 0) continue;
+    result[j] = dict->s.elements[i]->value;
+    j++;
   }
-  return container;
+  array->l.value = result;
+  array->l.length = dict->s.length - 2;
+  return array;
 }
 
 Value* IO_print(Value *args)
 {
-  Value *v = index_(args, 0);
+  Value *v = args->l.value[0];
   if (v == NULL) throwError("IO::print: expected 1 argument, got 0");
 
   switch (v->type)
@@ -74,12 +77,10 @@ Value* IO_print(Value *args)
   case LIST: {
     if (v->l.value == NULL) {
       printf("[]");
-    } else if (v->l.value->type == CHAR)
-    {
+    } else if (v->l.value[0]->type == CHAR) {
       printf("\"");
-      for (Value *i = v; i != NULL; i = i->l.next)
-      {
-        IO_print(list(i->l.value, NULL));
+      for (int i = 0; i < v->l.length; i++) {
+        printf("%c", v->l.value[i]->c);
       }
       printf("\"");
     }
@@ -87,12 +88,9 @@ Value* IO_print(Value *args)
     {
       printf("[");
       if (v->l.value != NULL) {
-        for (Value *i = v; i != NULL; i = i->l.next)
-        {
-          if (i->l.value == NULL) break;
-          IO_print(list(i->l.value, NULL));
-          if (i->l.next != NULL)
-          {
+        for (int i = 0; i < v->l.length; i++) {
+          IO_print(list(1, v->l.value[i], NULL));
+          if (i != v->l.length - 1) {
             printf(", ");
           }
         }
@@ -108,29 +106,24 @@ Value* IO_print(Value *args)
     printf("%s", v->b ? "true" : "false");
     break;
   case STRUCT:
-    if (Array_has(list(v, list(string("$$enum"), NULL)))->b && property_(v, "$$enum")->b) {
+    if (Array_has(list(2, v, string("$$enum")))->b && property_(v, "$$enum")->b) {
       printf("%s(", toString(property_(v, "type")));
       Value* varArgs = getVariantArguments(v);
-      while (varArgs != NULL) {
-        if (varArgs->l.value == NULL) break;
-        IO_print(list(varArgs->l.value, NULL));
-        if (varArgs->l.next != NULL && varArgs->l.next->l.value != NULL) {
+      for (int i = 0; i < varArgs->l.length; i++) {
+        IO_print(list(1, varArgs->l.value[i], NULL));
+        if (i != varArgs->l.length - 1) {
           printf(", ");
         }
-        varArgs = varArgs->l.next;
       }
       printf(")");
     } else {
       printf("{");
-      if (v->s.value != NULL) {
+      if (v->s.length > 0) {
         printf(" ");
-        for (Value *i = v; i != NULL; i = i->s.next)
-        {
-          if (i->s.value == NULL) break;
-          printf("%s: ", i->s.name);
-          IO_print(list(i->s.value, NULL));
-          if (i->s.next != NULL)
-          {
+        for (int i = 0; i < v->s.length; i++) {
+          printf("%s: ", v->s.elements[i]->name);
+          IO_print(list(1, v->s.elements[i]->value, NULL));
+          if (i != v->s.length - 1) {
             printf(", ");
           }
         }
@@ -156,15 +149,22 @@ void update(Value* v, Value* value) {
     case CHAR:
       v->c = value->c;
       break;
-    case LIST:
-      v->l.value = value->l.value;
-      v->l.next = value->l.next;
+    case LIST: {
+      v->l.length = value->l.length;
+      v->l.value = tgc_realloc(gc(), v->l.value, sizeof(Value*) * v->l.length);
+      for (int i = 0; i < v->l.length; i++) {
+        v->l.value[i] = value->l.value[i];
+      }
       break;
-    case STRUCT:
-      v->s.name = value->s.name;
-      v->s.value = value->s.value;
-      v->s.next = value->s.next;
+    }
+    case STRUCT: {
+      v->s.length = value->s.length;
+      v->s.elements = tgc_realloc(gc(), v->s.elements, sizeof(Value*) * v->s.length);
+      for (int i = 0; i < v->s.length; i++) {
+        v->s.elements[i] = value->s.elements[i];
+      }
       break;
+    }
     case UNIT:
       break;
     case BOOL:
@@ -189,10 +189,6 @@ Value* IO_readFile(Value* args) {
   FILE* file = fopen(toString(path), "r");
   char c;
   while ((c = fgetc(file)) != EOF) {
-    if (result->l.value == NULL) {
-      result->l.value = character(c);
-      continue;
-    }
     push(result, character(c));
   }
   fclose(file);

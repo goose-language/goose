@@ -10,15 +10,19 @@
 #define STRUCT 6
 #define LAMBDA 7
 
-struct Struct {
+struct Element {
   char* name;
   struct _Value* value;
-  struct _Value* next;
+};
+
+struct Struct {
+  int length;
+  struct Element** elements;
 };
 
 struct List {
-  struct _Value* value;
-  struct _Value* next;
+  int length;
+  struct _Value** value;
 };
 
 typedef struct _Value {
@@ -37,10 +41,11 @@ typedef struct _Value {
 Value* integer(int value);
 Value* floating(float value);
 Value* character(char value);
-Value* list(Value* value, Value* next);
+Value* list(int length, ...);
 Value* unit(void);
 Value* boolean(int value);
-Value* structure(char* name, Value* value, Value* next);
+struct Element* element(char* name, Value* value);
+Value* structure(int length, ...);
 Value* makeLambda(Value* (*f)(Value* args));
 Value* string(char* value);
 Value* emptyList();

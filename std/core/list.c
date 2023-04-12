@@ -5,46 +5,38 @@
 #include "num.h"
 #include "conversion.h"
 #include "type.h"
+#include "error.h"
 #include "garbage/tgc.h"
 #include "garbage.h"
 
 Value* index_(Value *v, int i) {
   if (v->type == LIST) {
-    int count = 0;
-    while (v != NULL) {
-      if (count == i) {
-        return v->l.value;
-      } else {
-        count++;
-        v = v->l.next;
-      }
+    if (v->l.length == 0) {
+      throwError("index out of bounds");
     }
-    throwError("index out of bounds");
+    if (v->l.length < i) {
+      throwError("index out of bounds");
+    }
+    return v->l.value[i];
   } else {
-    throwError("expected list, got %s", Type_of(list(v, NULL)));
+    printf("Expected list, got %s", Type_of(list(1, v, NULL)));
+    throwError("expected list");
   }
 }
 
 Value* push(Value* lst, Value* value) {
   Value* result = lst;
   if (result == NULL) {
-    result = list(value, NULL);
+    return list(1, value);
+  } else if (result->type == LIST) {
+    result->l.value = (Value**) tgc_realloc(gc(), result->l.value, sizeof(Value*) * (result->l.length + 1));
+    result->l.value[result->l.length] = value;
+    result->l.length++;
   } else {
-    while (result->l.next != NULL) {
-      result = result->l.next;
-    }
-    result->l.next = list(value, NULL);
+    printf("Expected list, got %s", Type_of(list(1, result, NULL)));
+    throwError("expected list");
   }
   return result;
-}
-
-Value* Array_next(Value*args) {
-  Value* array = index_(args, 0);
-  if (array->type == LIST) {
-    return array->l.next;
-  } else {
-    throwError("Array::next: expected array, got %s", Type_of(list(array, NULL)));
-  }
 }
 
 Value* Array_length(Value* args) {
@@ -52,22 +44,23 @@ Value* Array_length(Value* args) {
   if (array == NULL) {
     return integer(0);
   } else if (array->type == LIST) {
-    if (eq(array, emptyList())->b) {
-      return integer(0);
-    } else {
-      return add(integer(1), Array_length(list(array->l.next, NULL)));
-    }
-  } else throwError("Array::length: expected array, got %s", Type_of(list(array, NULL)));
+    return integer(array->l.length);
+  } else {
+    printf("Expected list, got %s", Type_of(list(1, array, NULL)));
+    throwError("expected list");
+  }
 }
 
 Value* property_(Value* dict, char* key) {
   if (dict == NULL) throwError("cannot access structure property of NULL");
   if (dict->type == STRUCT) {
-    if (strcmp(dict->s.name, key) == 0) {
-      return dict->s.value;
-    } else {
-      return property_(dict->s.next, key);
+    for (int i = 0; i < dict->s.length; i++) {
+      if (strcmp(dict->s.elements[i]->name, key) == 0) {
+        return dict->s.elements[i]->value;
+      }
     }
+    printf("Structure has no property named %s", key);
+    throwError("structure has no property");
   } else {
     return NULL;
   }
@@ -78,16 +71,15 @@ Value* Array_has(Value* args) {
   if (dict == NULL) throwError("Array::has: expected 2 arguments, got 0");
 
   Value* key = index_(args, 1);
-  if (dict == NULL) throwError("Array::has: expected 2 arguments, got 1");
+  if (key == NULL) throwError("Array::has: expected 2 arguments, got 1");
 
   if (dict->type == STRUCT) {
-    if (strcmp(dict->s.name, toString(key)) == 0) {
-      return boolean(1);
-    } else if (dict->s.next != NULL) {
-      return Array_has(list(dict->s.next, list(key, NULL)));
-    } else {
-      return boolean(0);
+    for (int i = 0; i < dict->s.length; i++) {
+      if (strcmp(dict->s.elements[i]->name, toString(key)) == 0) {
+        return boolean(1);
+      }
     }
+    return boolean(0);
   } else {
     return boolean(0);
   }
@@ -115,13 +107,18 @@ Value* IO_clone(Value *args)
     c->c = v->c;
     break;
   case LIST:
-    c->l.value = IO_clone(list(v->l.value, NULL));
-    if (v!= NULL && v->l.next != NULL) c->l.next = IO_clone(list(v->l.next, NULL));
+    c->l.value = (Value**) tgc_alloc(gc(), sizeof(Value*) * v->l.length);
+    c->l.length = v->l.length;
+    for (int i = 0; i < v->l.length; i++) {
+      c->l.value[i] = IO_clone(list(1, v->l.value[i], NULL));
+    }
     break;
   case STRUCT:
-    c->s.name = v->s.name;
-    c->s.value = IO_clone(list(v->s.value, NULL));
-    if (v != NULL && v->s.next != NULL) c->s.next = IO_clone(list(v->s.next, NULL));
+    c->s.elements = (struct Element**) tgc_alloc(gc(), sizeof(struct Element*) * v->s.length);
+    c->s.length = v->s.length;
+    for (int i = 0; i < v->s.length; i++) {
+      c->s.elements[i] = element(v->s.elements[i]->name, IO_clone(list(1, v->s.elements[i]->value, NULL)));
+    }
     break;
   case UNIT:
     break;
@@ -141,6 +138,14 @@ Value* Array_create(Value* args) {
   if (eq(size, integer(0))->b) {
     return NULL;
   } else {
-    return list(IO_clone(list(value, NULL)), Array_create(list(sub(size, integer(1)), list(value, NULL))));
+    Value** array = (Value**) tgc_alloc(gc(), sizeof(Value*) * toInt(size));
+    for (int i = 0; i < toInt(size); i++) {
+      array[i] = IO_clone(list(1, value, NULL));
+    }
+    Value* result = tgc_alloc(gc(), sizeof(Value));
+    result->type = LIST;
+    result->l.value = array;
+    result->l.length = toInt(size);
+    return result;
   }
 }

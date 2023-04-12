@@ -18,7 +18,7 @@ Value* Type_of(Value* args) {
     case CHAR: return string("char");
     case LIST: 
       if (value->l.value != NULL) {
-        return add(string("list<"), add(Type_of(list(value->l.value, NULL)), string(">")));
+        return add(string("list<"), add(Type_of(list(1, value->l.value)), string(">")));
       }
       return string("list");
     case UNIT: return string("nil");
@@ -26,10 +26,13 @@ Value* Type_of(Value* args) {
     case STRUCT: {
       Value *acc = string("structure<");
       Value *current = value;
-      while (current != NULL) {
-        acc = add(acc, add(string(current->s.name), string(": ")));
-        acc = add(acc, current->s.next == NULL ? Type_of(list(current->s.value, NULL)) : add(Type_of(list(current->s.value, NULL)), string(", ")));
-        current = current->s.next;
+      for (int i = 0; i < value->s.length; i++) {
+        acc = add(acc, string(value->s.elements[i]->name));
+        acc = add(acc, string(": "));
+        acc = add(acc, Type_of(list(1, value->s.elements[i]->value)));
+        if (i < value->s.length - 1) {
+          acc = add(acc, string(", "));
+        }
       }
       acc = add(acc, string(">"));
       return acc;
@@ -55,30 +58,21 @@ char* toString_(Value* value) {
     };
     case CHAR: return "char";
     case LIST: {
-      if (value->l.value->type == CHAR) {
-        char* buffer = malloc(sizeof(char) * Array_length(list(value, NULL))->i);
-        Value* current = value;
-        int i = 0;
-        while (current != NULL) {
-          buffer[i] = current->l.value->c;
-          current = current->l.next;
-          i++;
+      if (value->l.value[0]->type == CHAR) {
+        char* buffer = malloc(sizeof(char) * value->l.length);
+        for (int i = 0; i < value->l.length; i++) {
+          buffer[i] = value->l.value[i]->c;
         }
         return buffer;
       } else {
         char* buffer = malloc(sizeof(char) * 8);
         buffer[0] = '[';
         Value* current = value;
-        int i = 1;
-        while (current != NULL) {
-          strcat(buffer, toString_(current->l.value));
-          if (current->l.next != NULL) {
+        for (int i = 0; i < value->l.length; i++) {
+          strcat(buffer, toString_(current->l.value[i]));
+          if (i < value->l.length - 1) {
             strcat(buffer, ", ");
-            i += 2;
           }
-          i += strlen(toString_(current->l.value));
-          realloc(buffer, sizeof(char) * (strlen(buffer) + i));
-          current = current->l.next;
         }
         strcat(buffer, "]");
         return buffer;
@@ -87,41 +81,30 @@ char* toString_(Value* value) {
     case UNIT: return "nil";
     case BOOL: return "bool";
     case STRUCT: {
-      if (Array_has(list(value, list(string("$$enum"), NULL)))->b && property_(value, "$$enum")->b) {
+      if (Array_has(list(2, value, string("$$enum")))->b && property_(value, "$$enum")->b) {
         char* buffer = malloc(sizeof(char) * 16);
         strcat(buffer, toString(property_(value, "type")));
         strcat(buffer, "(");
         Value* varArgs = getVariantArguments(value);
-        while (varArgs != NULL) {
-          if (varArgs->l.value == NULL) break;
-          strcat(buffer, toString_(varArgs->l.value));
-          if (varArgs->l.next != NULL && varArgs->l.next->l.value != NULL) {
+        for (int i = 0; i < varArgs->l.length; i++) {
+          strcat(buffer, toString_(varArgs->l.value[i]));
+          if (i < varArgs->l.length - 1) {
             strcat(buffer, ", ");
           }
-          varArgs = varArgs->l.next;
         }
         strcat(buffer, ")");
         return buffer;
       } else {
-        Value *current = value;
-        if (current == NULL) return "{}";
-        char* buffer = malloc(sizeof(char) * 16);
-        buffer[0] = '{';
-        buffer[1] = ' ';
-        int i = 1;
-        while (current != NULL) {
-          strcat(buffer, current->s.name);
+        if (value->s.length == 0) return "{}";
+        char* buffer = malloc(sizeof(char) * 8);
+        strcat(buffer, "{ ");
+        for (int i = 0; i < value->s.length; i++) {
+          strcat(buffer, value->s.elements[i]->name);
           strcat(buffer, ": ");
-          i += strlen(current->s.name) + 2;
-          char* value = toString_(current->s.value);
-          strcat(buffer, value);
-          if (current->s.next != NULL) {
+          strcat(buffer, toString_(value->s.elements[i]->value));
+          if (i < value->s.length - 1) {
             strcat(buffer, ", ");
-            i += 2;
           }
-          i += strlen(value);
-          buffer = realloc(buffer, sizeof(char) * (strlen(buffer) + i + 1));
-          current = current->s.next;
         }
         strcat(buffer, " }");
         return buffer;

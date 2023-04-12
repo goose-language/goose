@@ -21,7 +21,15 @@ Value* eq(Value* a, Value* b) {
   } else if (a->type == BOOL && b->type == BOOL) {
     return boolean(a->b == b->b);
   } else if (a->type == LIST && b->type == LIST) {
-    return boolean(eq(a->l.value, b->l.value)->b && eq(a->l.next, b->l.next)->b );
+    if (a->l.length != b->l.length) {
+      return boolean(0);
+    }
+    for (int i = 0; i < a->l.length; i++) {
+      if (!eq(a->l.value[i], b->l.value[i])->b) {
+        return boolean(0);
+      }
+    }
+    return boolean(1);
   } else {
     return boolean(0);
   }
