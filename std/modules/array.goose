@@ -4,12 +4,11 @@ public module Array
   declare slice[a](array: [a], idx: int): [a]
   declare length[a](array: [a]): int
   declare create[a](length: int, value: a): [a]
-  declare next[a](array: [a]): [a]
 
   def empty[a](arr: [a]): bool do return Array::length(arr) == 0 end
 
   def concat[a](arr1: [a], arr2: [a]): [a] do
-    def acc: [a] = Array::create(Array::length(arr1) + Array::length(arr2), if Array::length(arr1) > 0 then arr1[0] else arr2[0])
+    def acc: [a] = Array::create(Array::length(arr1) + Array::length(arr2), if Array::length(arr1) > 0 then IO::clone(arr1[0]) else IO::clone(arr2[0]))
     def i = 0
     for item in arr1 do
       acc[i] = item
@@ -38,10 +37,9 @@ public module Array
 
   def slice[a](array: [a], idx: int): [a] do
     def i = 0
-    def arr = IO::clone(array)
-    while i < idx do
-      if Array::length(arr) == 1 then return []
-      arr = Array::next(arr)
+    def arr = []
+    while i < Array::length(array) do
+      if i >= idx then Array::push(arr, array[i])
       i = i + 1
     end
     return arr
