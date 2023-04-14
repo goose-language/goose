@@ -1,53 +1,69 @@
 #ifndef VALUE_H
 #define VALUE_H
+#include "value/nanbox.h"
+#include <stdlib.h>
 
-#define INT 0
-#define FLOAT 1
-#define CHAR 2
-#define LIST 3
-#define UNIT 4
-#define BOOL 5
-#define STRUCT 6
-#define LAMBDA 7
+// The type of the stored value
+typedef enum {
+  TYPE_INTEGER,
+  TYPE_FLOAT,
+  TYPE_BOOL,
+  TYPE_NULL,
+  TYPE_CHAR,
+  TYPE_ARRAY,
+  TYPE_DICT,
+  TYPE_LAMBDA,
+  TYPE_MUTABLE,
+} ValueType;
 
-struct Element {
-  char* name;
-  struct _Value* value;
-};
+// Container for arrays
+typedef struct {
+  nanbox_t* data;
+  uint32_t length;
+  uint32_t capacity;
+} Array;
 
-struct Struct {
-  int length;
-  struct Element** elements;
-};
+// Container for dictionaries
+typedef struct {
+  char** keys;
+  nanbox_t* values;
+  uint32_t capacity;
+  uint32_t length;
+} Dict;
 
-struct List {
-  int length;
-  struct _Value** value;
-};
+// Container for lambdas
+typedef struct {
+  nanbox_t (*f)(nanbox_t args);
+} Lambda;
 
-typedef struct _Value {
-  int type;
+// Container type for values
+typedef struct {
+  ValueType type;
+
   union {
-    long long int i;
-    float f;
-    char c;
-    struct List l;
-    struct Struct s;
-    int b;
-    struct _Value* (*$$fun)(struct _Value* args);
+    Array as_array;
+    Dict as_dict;
+    Lambda as_lambda;
+    char as_char;
+    nanbox_t* as_pointer;
   };
-} Value;
+} HeapValue;
 
-Value* integer(int value);
-Value* floating(float value);
-Value* character(char value);
-Value* list(int length, ...);
-Value* unit(void);
-Value* boolean(int value);
-struct Element* element(char* name, Value* value);
-Value* structure(int length, ...);
-Value* makeLambda(Value* (*f)(Value* args));
-Value* string(char* value);
-Value* emptyList();
+nanbox_t integer(int32_t value);
+nanbox_t floating(double value);
+nanbox_t character(char value);
+nanbox_t list(int length, ...);
+nanbox_t unit(void);
+nanbox_t boolean(int value);
+nanbox_t structure(int length, ...);
+nanbox_t makeLambda(nanbox_t (*f)(nanbox_t args));
+nanbox_t string(char* value);
+nanbox_t emptyList();
+ValueType get_type(nanbox_t value);
+nanbox_t create_pointer(HeapValue* ptr);
+nanbox_t create_mutable(nanbox_t value);
+nanbox_t get_mutable(nanbox_t value);
+
+nanbox_t* unbox_mutable(nanbox_t value);
 
 #endif

@@ -3,114 +3,137 @@
 #include "value.h"
 #include <string.h>
 #include "garbage/tgc.h"
+#include "conversion.h"
 #include "garbage.h"
 #include "io.h"
 #include <stdarg.h>
+#include "value/nanbox.h"
 
-Value* integer(int value) {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = INT;
-  v->i = value;
-  return v;
+nanbox_t integer(int32_t value) {
+  return nanbox_from_int(value);
 }
 
-Value* floating(float value) {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = FLOAT;
-  v->f = value;
-  return v;
+nanbox_t create_pointer(HeapValue* value) {
+  return nanbox_from_pointer(value);
 }
 
-Value* character(char value) {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = CHAR;
-  v->c = value;
-  return v;
+nanbox_t floating(double value) {
+  return nanbox_from_double(value);
 }
 
-Value* list(int length, ...) {
+nanbox_t character(char value) {
+  HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
+  ptr->type = TYPE_CHAR;
+  ptr->as_char = value;
+  return create_pointer(ptr);
+}
+
+nanbox_t list(int count, ...) {
+  HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
+  ptr->type = TYPE_ARRAY;
+
+  size_t value_buffer_size = sizeof(nanbox_t) * count;
+  ptr->as_array.data = (nanbox_t*) malloc(value_buffer_size);
+
   va_list args;
-  va_start(args, length);
-  Value** v = (Value**) tgc_alloc(gc(), sizeof(Value*) * length);
-  int i = 0;
+  va_start(args, count);
   
-  while (i < length) {
-    v[i] = va_arg(args, Value*);
-    i += 1;
+
+  for (int i = 0; i < count; i++) {
+    ptr->as_array.data[i] = va_arg(args, nanbox_t);
   }
 
   va_end(args);
 
-  Value* list = (Value*) tgc_alloc(gc(), sizeof(Value));
-  list->type = LIST;
-  list->l.value = v;
-  list->l.length = i;
-  return list;
+  ptr->as_array.length = count;
+
+  return create_pointer(ptr);
 }
 
-Value* structure(int length, ...) {
+nanbox_t create_mutable(nanbox_t value) {
+  HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
+  nanbox_t* ptr_ = (nanbox_t*)malloc(sizeof(nanbox_t));
+  *ptr_ = value;
+  ptr->type = TYPE_MUTABLE;
+  ptr->as_pointer = ptr_;
+  return create_pointer(ptr);
+}
+
+inline nanbox_t get_mutable(nanbox_t value) {
+  return *(((HeapValue*)nanbox_to_pointer(value))->as_pointer);
+}
+
+nanbox_t structure(int length, ...) {
+  HeapValue* dict = (HeapValue*) malloc(sizeof(HeapValue));
+  dict->type = TYPE_DICT;
+  dict->as_dict.length = length;
+
+  dict->as_dict.keys = malloc(sizeof(char*) * length);
+  dict->as_dict.values = malloc(sizeof(nanbox_t) * length);
+
   va_list args;
   va_start(args, length);
-  
-  struct Element** v = (Value*) tgc_alloc(gc(), sizeof(struct Element*) * length);
 
-  int i = 0;
-  while (i < length) {
-    v[i] = va_arg(args, struct Element*);
-    i += 1;
+  for (int i = 0; i < length; i++) {
+    dict->as_dict.keys[i] = va_arg(args, char*);
+    dict->as_dict.values[i] = va_arg(args, nanbox_t);
   }
 
   va_end(args);
 
-  Value* dict = (Value*) tgc_alloc(gc(), sizeof(Value));
-  dict->type = STRUCT;
-  dict->s.length = i;
-  dict->s.elements = v;
-  return dict;
+  return create_pointer(dict);
 }
 
-struct Element* element(char* name, Value* value) {
-  struct Element* e = (struct Element*) tgc_alloc(gc(), sizeof(struct Element));
-  e->name = name;
-  e->value = value;
-  return e;
+nanbox_t* unbox_mutable(nanbox_t value) {
+  return ((HeapValue*)nanbox_to_pointer(value))->as_pointer;
 }
 
-Value* unit() {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = UNIT;
-  return v;
+nanbox_t unit() {
+  return nanbox_null();
 }
 
-Value* boolean(int value) {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = BOOL;
-  v->b = value;
-  return v;
+nanbox_t boolean(int value) {
+  return value ? nanbox_true() : nanbox_false();
 }
 
-Value* makeLambda(Value* (*f)(Value*)) {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = LAMBDA;
-  v->$$fun = f;
-  return v;
+nanbox_t makeLambda(nanbox_t (*f)(nanbox_t)) {
+  HeapValue* lambda = (HeapValue*) malloc(sizeof(HeapValue));
+  lambda->type = TYPE_LAMBDA;
+  lambda->as_lambda.f = f;
+  return create_pointer(lambda);
 }
 
-Value* emptyList() {
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = LIST;
-  v->l.length = 0;
-  return v;
+nanbox_t emptyList() {
+  HeapValue* list_ = (HeapValue*) malloc(sizeof(HeapValue));
+  list_->type = TYPE_ARRAY;
+  list_->as_array.length = 0;
+  list_->as_array.data = NULL;
+  return create_pointer(list_);
 }
 
-Value* string(char* value) {
-  Value** container = (Value**) tgc_alloc(gc(), sizeof(Value*) * strlen(value));
+nanbox_t string(char* value) {
+  HeapValue* string = (HeapValue*) malloc(sizeof(HeapValue));
+  string->type = TYPE_ARRAY;
+  string->as_array.length = strlen(value);
+  nanbox_t* data = malloc(sizeof(nanbox_t) * strlen(value));
   for (int i = 0; i < strlen(value); i++) {
-    container[i] = character(value[i]);
+    data[i] = character(value[i]);
   }
-  Value* v = (Value*) tgc_alloc(gc(), sizeof(Value));
-  v->type = LIST;
-  v->l.length = strlen(value);
-  v->l.value = container;
-  return v;
+
+  string->as_array.data = data;
+
+  return create_pointer(string);
+}
+
+ValueType get_type(nanbox_t value) {
+  if (nanbox_is_pointer(value)) {
+    return ((HeapValue*) nanbox_to_pointer(value))->type;
+  }
+
+  if (nanbox_is_int(value)) return TYPE_INTEGER;
+  if (nanbox_is_double(value)) return TYPE_FLOAT;
+  if (nanbox_is_boolean(value)) return TYPE_BOOL;
+  if (nanbox_is_null(value)) return TYPE_NULL;
+  
+  return TYPE_NULL;
 }
