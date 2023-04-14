@@ -18,6 +18,12 @@ data Toplevel
       functionArgs :: [Annoted (Maybe Declaration)],
       functionBody :: Located Expression }
 
+  -- | A toplevel variable declaration
+  -- | Of the form: def variableName = expression
+  | Declaration {
+      declarationName :: Annoted (Maybe Declaration),
+      declarationValue :: Located Expression }
+
   -- | A toplevel type declaration
   -- | Of the form: type typeName = typeConstructor
   | Type {
@@ -170,6 +176,7 @@ instance Show Toplevel where
   show (Declare name gens (Just args) ret) = "def " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ "): " ++ show ret
   show (Declare name gens Nothing ret) = "def " ++ name ++ show gens ++ ": " ++ show ret
   show (EnumDeclare name gens) = "declare enum " ++ name ++ show gens
+  show (Declaration name expr) = "def " ++ show name ++ " = " ++ show expr
 
 instance Show Expression where
   show (Variable name) = show name

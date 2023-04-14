@@ -15,6 +15,7 @@ parseToplevel parseExpression = P.choice [
     parseModule parseExpression,
     P.try parseEnumDeclaration,
     parseDeclare,
+    P.try $ parseDeclaration parseExpression,
     parseFunction parseExpression,
     parsePublic parseExpression,
     parseExtern,
@@ -75,6 +76,15 @@ parsePublic parseExpression = L.locate $ do
   L.reserved "public"
   body <- parseToplevel parseExpression
   return $ C.Public body
+
+parseDeclaration :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
+parseDeclaration expr = L.locate $ do
+  L.reserved "def"
+  name <- L.identifier
+  args <- P.optionMaybe $ L.reserved ":" *> D.parseDeclaration
+  L.reservedOp "="
+  value <- expr
+  return $ C.Declaration (C.Annoted name args) value 
 
 parseDeclare :: Monad m => L.Goose m C.Toplevel
 parseDeclare = L.locate $ do
