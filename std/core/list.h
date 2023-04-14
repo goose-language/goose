@@ -3,18 +3,18 @@
 #include "value.h"
 
 // List functions
-Value* index_(Value* list, int index);
-Value* Array_next(Value* list);
-Value* Array_length(Value* list);
-Value* Array_create(Value* args);
-Value* push(Value* list, Value* value);
+nanbox_t index_(nanbox_t list, int index);
+nanbox_t Array_next(nanbox_t list);
+nanbox_t Array_length(nanbox_t list);
+nanbox_t Array_create(nanbox_t args);
+nanbox_t Array_push(nanbox_t args);
 
 // Dictionary functions
-Value* property_(Value* dict, char* key);
-Value* Array_has(Value* args);
+nanbox_t property_(nanbox_t dict, char* key);
+nanbox_t Array_has(nanbox_t args);
 
 // Memory management functions
-Value* IO_clone(Value* value);
+nanbox_t IO_clone(nanbox_t value);
 
 
 #endif

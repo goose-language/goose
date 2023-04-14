@@ -1,90 +1,128 @@
 #include <stdlib.h>
 #include "eq.h"
+#include "conversion.h"
 
-Value* eq(Value* a, Value* b) {
-  if (a == NULL && b == NULL) {
+nanbox_t eq(nanbox_t a, nanbox_t b) {
+  ValueType type_a = get_type(a);
+  ValueType type_b = get_type(b);
+
+  if (type_a == TYPE_NULL && type_b == TYPE_NULL) {
     return boolean(1);
-  } else if (a == NULL || b == NULL) {
-    return boolean(0);
-  } else if (a->type == INT && b->type == INT) {
-    return boolean(a->i == b->i);
-  } else if (a->type == FLOAT && b->type == FLOAT) {
-    return boolean(a->f == b->f);
-  } else if (a->type == INT && b->type == FLOAT) {
-    return boolean(a->i == b->f);
-  } else if (a->type == FLOAT && b->type == INT) {
-    return boolean(a->f == b->i);
-  } else if (a->type == CHAR && b->type == CHAR) {
-    return boolean(a->c == b->c);
-  } else if (a->type == UNIT && b->type == UNIT) {
-    return boolean(1);
-  } else if (a->type == BOOL && b->type == BOOL) {
-    return boolean(a->b == b->b);
-  } else if (a->type == LIST && b->type == LIST) {
-    if (a->l.length != b->l.length) {
+  } else if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
+    return boolean(a.as_int64 == b.as_int64);
+  } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
+    float a_float = decode_floating(a);
+    float b_float = decode_floating(b);
+
+    return boolean(a_float == b_float);
+  } else if (type_a == TYPE_CHAR && type_b == TYPE_CHAR) {
+    char a_char = decode_character(a);
+    char b_char = decode_character(b);
+
+    return boolean(a_char == b_char);
+  } else if (type_a == TYPE_BOOL && type_b == TYPE_BOOL) {
+    int a_bool = decode_boolean(a);
+    int b_bool = decode_boolean(b);
+
+    return boolean(a_bool == b_bool);
+  } else if (type_a == TYPE_ARRAY && type_b == TYPE_ARRAY) {
+    Array a_array = decode_pointer(a)->as_array;
+    Array b_array = decode_pointer(b)->as_array;
+
+    if (a_array.length != b_array.length) {
       return boolean(0);
     }
-    for (int i = 0; i < a->l.length; i++) {
-      if (!eq(a->l.value[i], b->l.value[i])->b) {
+
+    for (int i = 0; i < a_array.length; i++) {
+      int boo = !decode_boolean(eq(a_array.data[i], b_array.data[i]));
+      if (boo) {
         return boolean(0);
       }
     }
+
+    return boolean(1);
+  } else if (type_a == TYPE_DICT && type_b == TYPE_DICT) {
+    Dict a_dict = decode_pointer(a)->as_dict;
+    Dict b_dict = decode_pointer(b)->as_dict;
+
+    if (a_dict.length != b_dict.length) {
+      return boolean(0);
+    }
+
+    for (int i = 0; i < a_dict.length; i++) {
+      int boo = !eq(a_dict.values[i], b_dict.values[i]).as_int64;
+      if (boo) {
+        return boolean(0);
+      }
+    }
+
     return boolean(1);
   } else {
     return boolean(0);
   }
 }
 
-Value* neq(Value* a, Value* b) {
-  return boolean(!eq(a, b)->i);
+nanbox_t neq(nanbox_t a, nanbox_t b) {
+  int boo = decode_boolean(eq(a, b));
+  return boolean(!boo);
 }
 
-Value* lt(Value* a, Value* b) {
-  if (a->type == INT && b->type == INT) {
-    return boolean(a->i < b->i);
-  } else if (a->type == FLOAT && b->type == FLOAT) {
-    return boolean(a->f < b->f);
-  } else if (a->type == INT && b->type == FLOAT) {
-    return boolean(a->i < b->f);
-  } else if (a->type == FLOAT && b->type == INT) {
-    return boolean(a->f < b->i);
-  } else if (a->type == CHAR && b->type == CHAR) {
-    return boolean(a->c < b->c);
+nanbox_t lt(nanbox_t a, nanbox_t b) {
+  ValueType type_a = get_type(a);
+  ValueType type_b = get_type(b);
+
+  if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
+    int a_int = decode_integer(a);
+    int b_int = decode_integer(b);
+
+    return boolean(a_int < b_int);
+  } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
+    float a_float = decode_floating(a);
+    float b_float = decode_floating(b);
+
+    return boolean(a_float < b_float);
+  } else if (type_a == TYPE_CHAR && type_b == TYPE_CHAR) {
+    char a_char = decode_character(a);
+    char b_char = decode_character(b);
+
+    return boolean(a_char < b_char);
   } else {
     return boolean(0);
   }
 }
 
-Value* gt(Value* a, Value* b) {
-  if (a->type == INT && b->type == INT) {
-    return boolean(a->i > b->i);
-  } else if (a->type == FLOAT && b->type == FLOAT) {
-    return boolean(a->f > b->f);
-  } else if (a->type == INT && b->type == FLOAT) {
-    return boolean(a->i > b->f);
-  } else if (a->type == FLOAT && b->type == INT) {
-    return boolean(a->f > b->i);
-  } else if (a->type == CHAR && b->type == CHAR) {
-    return boolean(a->c > b->c);
+nanbox_t gt(nanbox_t a, nanbox_t b) {
+  ValueType type_a = get_type(a);
+  ValueType type_b = get_type(b);
+
+  if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
+    int a_int = decode_integer(a);
+    int b_int = decode_integer(b);
+
+    return boolean(a_int > b_int);
+  } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
+    float a_float = decode_floating(a);
+    float b_float = decode_floating(b);
+
+    return boolean(a_float > b_float);
+  } else if (type_a == TYPE_CHAR && type_b == TYPE_CHAR) {
+    char a_char = decode_character(a);
+    char b_char = decode_character(b);
+
+    return boolean(a_char > b_char);
   } else {
     return boolean(0);
   }
 }
 
-Value* lte(Value* a, Value* b) {
-  return boolean(!gt(a, b)->b);
+nanbox_t lte(nanbox_t a, nanbox_t b) {
+  int boo = decode_boolean(gt(a, b));
+  return boolean(!boo);
 }
 
-Value* gte(Value* a, Value* b) {
-  return boolean(!lt(a, b)->b);
-}
-
-Value* and_(Value* a, Value* b) {
-  return boolean(a->b && b->b);
-}
-
-Value* or_(Value* a, Value* b) {
-  return boolean(a->b || b->b);
+nanbox_t gte(nanbox_t a, nanbox_t b) {
+  int boo = decode_boolean(lt(a, b));
+  return boolean(!boo);
 }
 
 

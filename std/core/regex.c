@@ -7,10 +7,10 @@
 #include "io.h"
 #include "error.h"
 
-Value* Regex_get(Value* args) {
+nanbox_t Regex_get(nanbox_t args) {
   int begin; int end;
-  char* string_ = toString(index_(args, 0));
-  char* regex = toString(index_(args, 1));
+  char* string_ = decode_string(index_(args, 0));
+  char* regex = decode_string(index_(args, 1));
   regex_t re;
   regmatch_t match;
   char* word;
@@ -39,9 +39,9 @@ Value* Regex_get(Value* args) {
   return string(word);
 }
 
-Value* Regex_test(Value* args) {
-  char* string_ = toString(index_(args, 0));
-  char* regex = toString(index_(args, 1));
+nanbox_t Regex_test(nanbox_t args) {
+  char* string_ = decode_string(index_(args, 0));
+  char* regex = decode_string(index_(args, 1));
   regex_t re;
   regmatch_t match;
   int status = regcomp(&re, regex, REG_EXTENDED);

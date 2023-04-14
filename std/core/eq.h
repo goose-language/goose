@@ -2,15 +2,15 @@
 #define EQ_H
 #include "value.h"
 
-Value* eq(Value* a, Value* b);
-Value* neq(Value* a, Value* b);
-Value* lt(Value* a, Value* b);
-Value* gt(Value* a, Value* b);
-Value* lte(Value* a, Value* b);
-Value* gte(Value* a, Value* b);
+nanbox_t eq(nanbox_t a, nanbox_t b);
+nanbox_t neq(nanbox_t a, nanbox_t b);
+nanbox_t lt(nanbox_t a, nanbox_t b);
+nanbox_t gt(nanbox_t a, nanbox_t b);
+nanbox_t lte(nanbox_t a, nanbox_t b);
+nanbox_t gte(nanbox_t a, nanbox_t b);
 
 // Logical operators
-Value* and_(Value* a, Value* b);
-Value* or_(Value* a, Value* b);
+nanbox_t and_(nanbox_t a, nanbox_t b);
+nanbox_t or_(nanbox_t a, nanbox_t b);
 
 #endif
