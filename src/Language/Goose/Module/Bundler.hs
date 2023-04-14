@@ -38,6 +38,9 @@ checkToplevel names (Public (Function { functionName = (C.Annoted name _) } :>: 
 checkToplevel names (Public (Enumeration { enumerationName = name } :>: _) :>:_) = if name `elem` names
   then filter (/= name) names
   else names
+checkToplevel names (Public (Declaration { declarationName = (C.Annoted name _) } :>: _) :>:_) = if name `elem` names
+  then filter (/= name) names
+  else names
 checkToplevel names (Namespace _ toplevels :>: _) = concatMap (checkToplevel names) toplevels
 checkToplevel names (Public toplevel :>: _) = checkToplevel names toplevel
 checkToplevel names _ = names
@@ -114,6 +117,13 @@ analyseToplevel (EnumDeclare name _ :>: _) = do
   name' <- createName name
   ST.modify $ \s -> s { types = M.insert name' name' (types s) }
   return []
+analyseToplevel (Declaration (name C.:@ ty) expr :>: pos) = do
+  ty' <- resolveImportedMaybeType ty pos
+  expr' <- resolveImportedExpressions expr
+  name' <- createName name
+  ST.modify $ \s -> s { mappings = M.insert name' name' (mappings s) }
+  return [Declaration (name' C.:@ ty') expr' :>: pos]
+  
 analyseToplevel x = return [x]
 
 keepPublic :: [Located (Toplevel)] -> [Located (Toplevel)]
