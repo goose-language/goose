@@ -349,6 +349,14 @@ inferToplevel (C.Located pos (C.Type name generics' decl)) = do
   ST.modify $ \s -> s { aliases = M.insert name (Forall gens' decl') (aliases s) }
 
   return (Void, [])
+inferToplevel (C.Located pos (C.Declaration (name C.:@ ty) expr)) = do
+  tv <- to ty
+  (t', e') <- withVariable (name, Forall [] tv) $ inferExpression expr
+
+  unify (tv :~: t', pos)
+  let scheme = Forall [] tv
+  ST.modify $ \s' -> s' { variables = M.insert name scheme (variables s') }
+  return (Void, [A.Declaration name  tv e'])
 inferToplevel (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 performInfer :: Monad m => [C.Located C.Toplevel] -> m (Either (String, Maybe String, C.Position) [A.Toplevel])
