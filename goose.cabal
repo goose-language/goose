@@ -100,6 +100,8 @@ library
         Language.Goose.Transformation.Closure.Hoisting
 
         Language.Goose.Transformation.EtaExpansion
+        Language.Goose.Transformation.DeclarationRemover
+
 
         Language.Goose.CLang.Compiler
             Language.Goose.CLang.Definition.IR
