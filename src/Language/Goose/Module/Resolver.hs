@@ -15,7 +15,7 @@ import Language.Goose.CLang.Definition.Generation
 type MonadResolver m = (MonadIO m, MonadError (String, Position) m)
 
 resolveImport :: MonadResolver m => String -> String -> Position -> m [Located Toplevel]
-resolveImport dir name pos = do
+resolveImport _ name pos = do
   let stdPath = getGoosePath
   let stdName = stdPath </> name
   let path = if startsWith "std" name then stdName else name
