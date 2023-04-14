@@ -16,20 +16,17 @@ nanbox_t index_(nanbox_t v, int i) {
     if (i < list_.length && i >= 0) {
       return list_.data[i];
     } else {
-      printf("Index out of bounds (%d) in ", i);
-      IO_print(list(1, v));
-      throwError("index out of bounds");
+      throwError("index out of bounds (%d) in %s", i, toString(v));
     }
   } else if (get_type(v) == TYPE_MUTABLE) {
     Array list_ = decode_pointer(get_mutable(v))->as_array;
     if (i < list_.length && i >= 0) {
       return create_mutable(list_.data[i]);
     } else {
-      throwError("index out of bounds");
+      throwError("index out of bounds (%d) in %s", i, toString(v));
     }
   } else {
-    printf("Expected list, got %s", Type_of(list(1, (nanbox_t[1]) { v })));
-    throwError("expected list");
+    throwError("expected list, got %s", decode_string(Type_of(list(1, v))));
   }
 }
 
@@ -45,15 +42,14 @@ nanbox_t Array_push(nanbox_t args) {
     list_.data[list_.length] = value;
     list_.length = list_.length + 1;
 
-    HeapValue* ptr = (HeapValue*)tgc_alloc(gc(), sizeof(HeapValue));
+    HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
     ptr->type = TYPE_ARRAY;
     ptr->as_array = list_;
 
     *mutable = create_pointer(ptr);
     return unit();
   } else {
-    printf("Expected mutable list, got %s", Type_of(list(1, (nanbox_t[1]) { lst })));
-    throwError("expected list");
+    throwError("expected mutable list, got %s", decode_string(Type_of(list(1, lst))));
   }
   return result;
 }
@@ -65,8 +61,7 @@ nanbox_t Array_length(nanbox_t args) {
   } else if (get_type(array) == TYPE_MUTABLE) {
     return integer(decode_pointer(get_mutable(array))->as_array.length);
   } else {
-    printf("Expected list, got %s", Type_of(list(1, (nanbox_t[1]) { array })));
-    throwError("expected list");
+    throwError("expected list, got %s", decode_string(Type_of(list(1, array))));
   }
 }
 
@@ -78,8 +73,7 @@ nanbox_t property_(nanbox_t dict, char* key) {
         return heap.values[i];
       }
     }
-    printf("Structure has no property named %s", key);
-    throwError("structure has no property");
+    throwError("structure has no property named %s in %s", key, toString(dict));
   } else {
     return unit();
   }
@@ -117,25 +111,25 @@ nanbox_t IO_clone(nanbox_t args)
       result = item;
       break;
     case TYPE_ARRAY: {
-      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
+      HeapValue* heap = malloc(sizeof(HeapValue));
       heap->type = TYPE_ARRAY;
       heap->as_array.length = decode_pointer(item)->as_array.length;
-      heap->as_array.data = tgc_alloc(gc(), sizeof(nanbox_t) * heap->as_array.length);
+      heap->as_array.data = malloc(sizeof(nanbox_t) * heap->as_array.length);
       for (int i = 0; i < heap->as_array.length; i++) {
         heap->as_array.data[i] = IO_clone(list(1, decode_pointer(item)->as_array.data[i]));
       }
       return create_pointer(heap);
     }
     case TYPE_DICT: {
-      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
+      HeapValue* heap = malloc(sizeof(HeapValue));
       heap->type = TYPE_DICT;
       HeapValue* item_ = decode_pointer(item);
       heap->as_dict.length = item_->as_dict.length;
-      heap->as_dict.values = tgc_alloc(gc(), sizeof(nanbox_t) * heap->as_dict.length);
-      heap->as_dict.keys = tgc_alloc(gc(), sizeof(char*) * heap->as_dict.length);
+      heap->as_dict.values = malloc(sizeof(nanbox_t) * heap->as_dict.length);
+      heap->as_dict.keys = malloc(sizeof(char*) * heap->as_dict.length);
       for (int i = 0; i < heap->as_dict.length; i++) {
         heap->as_dict.values[i] = IO_clone(list(1, item_->as_dict.values[i]));
-        heap->as_dict.keys[i] = tgc_alloc(gc(), sizeof(char) * strlen(item_->as_dict.keys[i]));
+        heap->as_dict.keys[i] = malloc(sizeof(char) * strlen(item_->as_dict.keys[i]));
         strcpy(heap->as_dict.keys[i], item_->as_dict.keys[i]);
       }
       return create_pointer(heap);
@@ -144,14 +138,13 @@ nanbox_t IO_clone(nanbox_t args)
       result = unit();
       break;
     case TYPE_LAMBDA: {
-      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
+      HeapValue* heap = malloc(sizeof(HeapValue));
       heap->type = TYPE_LAMBDA;
       heap->as_lambda = decode_pointer(item)->as_lambda;
       return create_pointer(heap);
     }
     default: 
-      printf("IO::clone: cannot clone unknown type %s", decode_string(Type_of(list(1, (nanbox_t[1]) { item }))));
-      throwError("IO::clone: cannot clone unknown type");
+      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(1, (nanbox_t[1]) { item }))));
   }
   return result;
 }
@@ -161,11 +154,11 @@ nanbox_t Array_create(nanbox_t args) {
   nanbox_t value = index_(args, 1);
 
   int size_ = decode_integer(size);
-  nanbox_t* data = tgc_alloc(gc(), sizeof(nanbox_t) * size_);
+  nanbox_t* data = malloc(sizeof(nanbox_t) * size_);
   for (int i = 0; i < size_; i++) {
     data[i] = IO_clone(list(1, value));
   }
-  HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
+  HeapValue* heap = malloc(sizeof(HeapValue));
   heap->type = TYPE_ARRAY;
   heap->as_array.length = size_;
   heap->as_array.data = data;

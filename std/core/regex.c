@@ -17,7 +17,7 @@ nanbox_t Regex_get(nanbox_t args) {
   int len;
   int status = regcomp(&re, regex, REG_EXTENDED);
   if (status != 0) {
-    throwError("Regex::get: invalid regex");
+    throwError("Regex::get: invalid regex with %s", regex);
   }
   status = regexec(&re, string_, 1, &match, 0);
   if (status != 0) {
@@ -28,7 +28,7 @@ nanbox_t Regex_get(nanbox_t args) {
   end = (int)match.rm_eo;
   len = end-begin;
 
-  word = (char*) tgc_alloc(gc(), sizeof(char) * (len + 1));
+  word = (char*) malloc(sizeof(char) * (len + 1));
   int j = 0;
   for (int i = begin; i < end; i++) {
     word[j] = string_[i];

@@ -24,7 +24,7 @@ nanbox_t add(nanbox_t a, nanbox_t b) {
     Array a_array = decode_pointer(a)->as_array;
     Array b_array = decode_pointer(b)->as_array;
 
-    nanbox_t* new_data = tgc_alloc(gc(), sizeof(nanbox_t) * (a_array.length + b_array.length));
+    nanbox_t* new_data = malloc(sizeof(nanbox_t) * (a_array.length + b_array.length));
     for (int i = 0; i < a_array.length; i++) {
       new_data[i] = a_array.data[i];
     }
@@ -33,7 +33,7 @@ nanbox_t add(nanbox_t a, nanbox_t b) {
     }
 
     Array new_array = {new_data, a_array.length + b_array.length};
-    HeapValue* new_heap_value = tgc_alloc(gc(), sizeof(HeapValue));
+    HeapValue* new_heap_value = malloc(sizeof(HeapValue));
     new_heap_value->type = TYPE_ARRAY;
     new_heap_value->as_array = new_array;
     return create_pointer(new_heap_value);
