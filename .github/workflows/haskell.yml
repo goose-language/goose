@@ -38,7 +38,8 @@ jobs:
         uses: release-drafter/release-drafter@v5.21.1
         with:
           publish: true
-          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   
       - uses: AButler/upload-release-assets@v2.0
         with:
