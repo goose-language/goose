@@ -3,6 +3,7 @@
 module Language.Goose.Transformation.ANF.ANF where
 import qualified Language.Goose.Transformation.ANF.AST as A
 import qualified Language.Goose.Typecheck.Definition.AST as T
+import qualified Language.Goose.Typecheck.Definition.Type as TY
 import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Control.Monad.RWS as RWS
@@ -10,14 +11,20 @@ import qualified Data.List as L
 
 import Language.Goose.Transformation.ANF.Monad
 
+v :: TY.Type
+v = TY.Mutable TY.Void
+
 anfTL :: MonadANF m => T.Toplevel -> m ([(String, A.ANFExpression)], A.ANFDefinition)
 anfTL (T.Function name args _ expr) = do
   (lets, expr') <- anfStmt expr
-  expr <- case last expr' of
-    A.SReturn _ -> return expr'
-    A.SExpression e -> return $ init expr' ++ [A.SReturn e]
-    _ -> return $ expr' ++ [A.SReturn $ A.ELiteral C.Unit]
-  return $ ([], A.DFunction name (map C.annotedName args) (createLet lets ++ expr))
+  case name of
+    "main" -> return $ ([], A.DFunction name [] (createLet lets ++ expr'))
+    _ -> do
+      expr <- case last expr' of
+        A.SReturn _ -> return expr'
+        A.SExpression e -> return $ init expr' ++ [A.SReturn e]
+        _ -> return $ expr' ++ [A.SReturn $ A.ELiteral C.Unit]
+      return $ ([], A.DFunction name (map C.annotedName args) (createLet lets ++ expr))
 anfTL (T.Declaration name _ expr) = do
   (lets, expr') <- anfExpr expr
   return $ (lets, A.DDeclaration name expr')
@@ -52,7 +59,11 @@ anfStmt (T.For name expr body) = do
 anfStmt (T.Update name expr) = do
   (lets, expr) <- anfExpr expr
   (lets', name) <- anfUpdated name
-  return $ (lets' ++ lets, [A.SUpdate name expr])
+  case name of
+    A.EVariable _ _ -> return $ (lets ++ lets', [A.SUpdate name expr])
+    _ -> do
+      n <- fresh
+      return $ (lets' ++ [(n, name)] ++ lets, [A.SUpdate (A.EVariable n v) expr])
 anfStmt (T.Sequence exprs) = do
   (lets, exprs) <- unzip <$> mapM anfStmt exprs
   return $ ([], concat $ zipWith (\let' expr -> createLet let' ++ expr) lets exprs)
@@ -121,7 +132,11 @@ anfExpr (T.ListAccess list index) = do
 anfExpr (T.Update updated expr) = do
   (lets, expr) <- anfExpr expr
   (lets', updated) <- anfUpdated updated
-  return $ (lets' ++ lets, A.EUpdate updated expr)
+  case updated of
+    A.EVariable _ _ -> return $ (lets ++ lets', A.EUpdate updated expr)
+    _ -> do
+      n <- fresh
+      return $ (lets' ++ [(n, updated)] ++ lets, A.EUpdate (A.EVariable n v) expr)
 anfExpr (T.Structure fields) = do
   (lets, fields) <- unzip <$> mapM (\(name, expr) -> do
     (lets, expr) <- anfExpr expr
@@ -148,17 +163,23 @@ anfExpr (T.While cond body) = do
   (lets, cond) <- anfExpr cond
   (lets', body) <- unzip <$> mapM anfStmt body
   return $ ([], embed $ createLet lets ++ [A.SWhile cond (createLet (concat lets') ++ concat body)])
+anfExpr (T.Mutable e) = do
+  (lets, e) <- anfExpr e
+  return $ (lets, A.EMutable e)
+anfExpr (T.Dereference e) = do
+  (lets, e) <- anfExpr e
+  return $ (lets, A.EDereference e)
 
 
-anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFUpdated)
-anfUpdated (T.VariableUpdate name _) = return ([], A.UVariable name)
+anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFExpression)
+anfUpdated (T.VariableUpdate name t) = return ([], A.EVariable name t)
 anfUpdated (T.ListUpdate updated index) = do
   (lets, updated) <- anfUpdated updated
   (lets', index) <- anfExpr index
-  return $ (lets ++ lets', A.UListAccess updated index)
+  return $ (lets ++ lets', A.EListAccess updated index)
 anfUpdated (T.StructureUpdate updated field) = do
   (lets, updated) <- anfUpdated updated
-  return $ (lets, A.UStructAccess updated field)
+  return $ (lets, A.EStructAccess updated field)
 
 embed :: [A.ANFStatement] -> A.ANFExpression
 embed [] = A.ELiteral (C.Unit)

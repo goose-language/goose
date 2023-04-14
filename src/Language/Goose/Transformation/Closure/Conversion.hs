@@ -82,12 +82,16 @@ convertStatement (SExpression e) = do
 convertStatement (SLet name z@ELambda {}) = do
   expr' <- closureConvert z name
   if name `S.member` free z
-    then return $ [SLet name expr', SUpdate (UStructAccess (UStructAccess (UVariable name) "env") name) (EVariable name v)] 
+    then do
+      n <- freshName
+      return $ [SLet name expr', SLet n (EStructAccess (EStructAccess (EVariable name v) "env") name), SUpdate (EVariable n v) (EVariable name v)] 
     else return $ [SLet name expr']
 convertStatement (SLet name e) = do
   (expr', stmts) <- convertExpression e
   if name `S.member` free e 
-    then return $ stmts ++ [SLet name expr', SUpdate (UStructAccess (UStructAccess (UVariable name) "env") name) (EVariable name v)] 
+    then do
+      n <- freshName
+      return $ stmts ++ [SLet name expr', SLet n (EStructAccess (EStructAccess (EVariable name v) "env") name), SUpdate (EVariable n v) (EVariable name v)] 
     else return $ stmts ++ [SLet name expr']
 convertStatement (SIf cond t f) = do
   (cond', stmts) <- convertExpression cond
@@ -172,6 +176,12 @@ convertExpression (EUnary op e) = do
 convertExpression (EUpdate updated e) = do
   (e', stmts) <- convertExpression e
   return $ (EUpdate updated e', stmts)
+convertExpression (EMutable e) = do
+  (e', stmts) <- convertExpression e
+  return $ (EMutable e', stmts)
+convertExpression (EDereference e) = do
+  (e', stmts) <- convertExpression e
+  return $ (EDereference e', stmts)
 
 runClosureConversion :: [ANFDefinition] -> [ANFDefinition]
 runClosureConversion xs = do

@@ -1,9 +1,10 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms #-}
 module Language.Goose.Transformation.EtaExpansion where
 
 import Language.Goose.Typecheck.Definition.AST
-import Language.Goose.Typecheck.Definition.Type
+import Language.Goose.Typecheck.Definition.Type hiding (pattern Mutable)
 import Language.Goose.Typecheck.Definition.Free
 
 import qualified Language.Goose.CST.Annoted as C
@@ -77,6 +78,8 @@ etaExpandExpr (Binary op e1 e2) = Binary op <$> (local $ etaExpandExpr e1) <*> (
 etaExpandExpr (Structure fields) = Structure <$> (local $ mapM (mapM etaExpandExpr) fields)
 etaExpandExpr (StructureAccess e name) = StructureAccess <$> (local $ etaExpandExpr e) <*> return name
 etaExpandExpr (Update u e) = Update u <$> (local $ etaExpandExpr e)
+etaExpandExpr (Mutable e) = Mutable <$> (local $ etaExpandExpr e)
+etaExpandExpr (Dereference e) = Dereference <$> (local $ etaExpandExpr e)
 etaExpandExpr _ = error "Not implemented"
 
 etaExpandTL :: MonadEta m => Toplevel -> m Toplevel

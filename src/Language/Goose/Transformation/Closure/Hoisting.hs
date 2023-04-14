@@ -83,6 +83,8 @@ convertExpression (EVariable x t) = return $ EVariable x t
 convertExpression (EBinary op e1 e2) = EBinary op <$> convertExpression e1 <*> convertExpression e2
 convertExpression (EUnary op e) = EUnary op <$> convertExpression e
 convertExpression (EUpdate updated e) = EUpdate updated <$> convertExpression e
+convertExpression (EMutable e) = EMutable <$> convertExpression e
+convertExpression (EDereference e) = EDereference <$> convertExpression e
 
 runHoisting :: [ANFDefinition] -> [ANFDefinition]
 runHoisting xs = do

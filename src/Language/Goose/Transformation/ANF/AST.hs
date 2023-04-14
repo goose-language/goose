@@ -5,17 +5,6 @@ import Language.Goose.Typecheck.Definition.Type
 import qualified Language.Goose.Typecheck.Definition.AST as A
 import Data.List
 
-data ANFUpdated 
-  = UVariable String
-  | UListAccess ANFUpdated ANFExpression
-  | UStructAccess ANFUpdated String
-  deriving Eq
-
-instance Show ANFUpdated where
-  show (UVariable name) = name
-  show (UListAccess updated expr) = show updated ++ "[" ++ show expr ++ "]"
-  show (UStructAccess updated name) = show updated ++ "." ++ name
-
 data ANFExpression 
   = EVariable String Type
   | ELiteral Literal
@@ -26,9 +15,11 @@ data ANFExpression
   | ELambda [String] [ANFStatement]
   | EList [ANFExpression]
   | EListAccess ANFExpression ANFExpression
-  | EUpdate ANFUpdated ANFExpression
+  | EUpdate ANFExpression ANFExpression
   | EStructure [(String, ANFExpression)]
   | EStructAccess ANFExpression String
+  | EMutable ANFExpression
+  | EDereference ANFExpression
   deriving Eq
 
 instance Show ANFExpression where
@@ -44,6 +35,8 @@ instance Show ANFExpression where
   show (EUpdate updated expr) = show updated ++ " = " ++ show expr
   show (EStructure fields) = "{" ++ intercalate ", " (map (\(n, e) -> n ++ ": " ++ show e) fields) ++ "}"
   show (EStructAccess struct field) = show struct ++ "." ++ field
+  show (EMutable expr) = "mutable " ++ show expr
+  show (EDereference expr) = "*" ++ show expr
 
 data ANFStatement
   = SLet String ANFExpression
@@ -54,7 +47,7 @@ data ANFStatement
   | SExpression ANFExpression
   | SBlock [ANFStatement]
   | SBreak
-  | SUpdate ANFUpdated ANFExpression
+  | SUpdate ANFExpression ANFExpression
   | SContinue
   | SMatch ANFExpression [(A.Pattern, [ANFStatement])]
   deriving Eq
