@@ -153,6 +153,7 @@ makeName (D.Namespaced paths name) = (if not (null paths) then L.intercalate "::
 makeName (D.Simple name) = name
 
 resolveImportedType :: MonadBundling m => D.Declaration -> Position -> m D.Declaration
+resolveImportedType (D.ID (D.Simple "Mutable")) _ = return $ D.ID (D.Simple "Mutable")
 resolveImportedType (D.ID name) pos = do
   mappings' <- ST.gets types
   case M.lookup (makeName name) mappings' of
@@ -254,6 +255,12 @@ resolveImportedExpressions (Match expr cases :>: pos) = do
     expr' <- resolveImportedExpressions expr
     return (pattern', expr')) cases
   return $ Match expr' cases' :>: pos
+resolveImportedExpressions (Mutable expr :>: pos) = do
+  expr' <- resolveImportedExpressions expr
+  return $ Mutable expr' :>: pos
+resolveImportedExpressions (Dereference expr :>: pos) = do
+  expr' <- resolveImportedExpressions expr
+  return $ Dereference expr' :>: pos
 resolveImportedExpressions (Located pos _) = E.throwError ("Not implemented", pos)
 
 resolveImportedPattern :: MonadBundling m => Pattern -> m Pattern
@@ -290,13 +297,6 @@ resolveImportedUpdate (VariableUpdate name :>: pos) = do
   case M.lookup (makeName name) mappings' of
     Just name' -> return $ VariableUpdate (D.Simple name') :>: pos
     Nothing -> return $ VariableUpdate name :>: pos
-resolveImportedUpdate (ListUpdate name index :>: pos) = do
-  name' <- resolveImportedUpdate name
-  index' <- resolveImportedExpressions index
-  return $ ListUpdate name' index' :>: pos
-resolveImportedUpdate (StructureUpdate name field :>: pos) = do
-  name' <- resolveImportedUpdate name
-  return $ StructureUpdate name' field :>: pos
 resolveImportedUpdate (Located pos _) = E.throwError ("Not implemented", pos)
 
 runModuleBundling :: (E.MonadIO m, MonadFail m) => [Located Toplevel] -> m (Either (String, Position) ([Located Toplevel]))
