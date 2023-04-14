@@ -69,6 +69,7 @@ data ANFDefinition
   = DFunction String [String] [ANFStatement]
   | DDeclaration (String) ANFExpression
   | DExtern (Annoted Type)
+  | DInternDeclare String
   | DDeclare (Annoted Type)
   deriving Eq
 
@@ -77,3 +78,4 @@ instance Show ANFDefinition where
   show (DDeclaration name expr) = "declaration " ++ name ++ " = " ++ show expr
   show (DExtern type') = "extern " ++ show type'
   show (DDeclare type') = "declare " ++ show type'
+  show (DInternDeclare name) = "intern declare " ++ name
