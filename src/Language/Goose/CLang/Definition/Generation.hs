@@ -15,7 +15,7 @@ import Control.Monad.State
 type MonadGeneration m = MonadState Int m
 
 rttiName :: String
-rttiName = "Value"
+rttiName = "nanbox_t"
 
 class Generation a where
   generate :: MonadGeneration m => a -> m String
@@ -31,11 +31,11 @@ instance Generation IRToplevel where
   generate (IRFunction name args body) = do
     body' <- generate body
     return $ if name == "main"
-      then "int main(int argc, char **argv) { " ++ startGarbage body' ++ "}"
-      else rttiName ++ "* " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ "* args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ "* " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
+      then "int main(int argc, char **argv) { " ++ body' ++ "}"
+      else rttiName ++ " " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ " args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ " " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
   generate (IRDeclaration name e) = do
     e' <- generate e
-    return $ rttiName ++ "* " ++ (varify name) ++ " = " ++ e' ++ ";"
+    return $ rttiName ++ " " ++ (varify name) ++ " = " ++ e' ++ ";"
   generate (IRExtern name _) = return $ "extern " ++ rttiName ++ "* " ++ name ++ ";"
   generate (IRStruct name fields) = do
     fields' <- mapM generate fields
@@ -68,21 +68,21 @@ instance Generation IRStatement where
     e' <- generate e
     t' <- generate t
     f' <- generate f
-    return $ "if (" ++ e' ++ "->b) {" ++ t' ++ "} else {" ++ f' ++ "}"
+    return $ "if (decode_boolean(" ++ e' ++ ")) {" ++ t' ++ "} else {" ++ f' ++ "}"
   generate (IRIf e t) = do
     e' <- generate e
     t' <- generate t
-    return $ "if (" ++ e' ++ "->b) {" ++ t' ++ "}"
+    return $ "if (decode_boolean(" ++ e' ++ ")) {" ++ t' ++ "}"
   generate (IRWhile e s) = do
     e' <- generate e
     s' <- generate s
-    return $ "while (" ++ e' ++ "->b) {" ++ s' ++ "}"
+    return $ "while (decode_boolean(" ++ e' ++ ")) {" ++ s' ++ "}"
   generate (IRFor name e s) = do
     let var = varify name
     acc <- (("$$__acc__" ++ var)++) <$> fresh
     e' <- generate e
     s' <- generate s
-    return $ "Value* " ++ acc ++ " = " ++ e' ++ ";" ++ "for (int $$i = 0; $$i < " ++ acc ++ "->l.length; $$i++) { Value* " ++ (varify name) ++ " = " ++ acc ++ "->l.value[$$i]; " ++  s' ++ "}"
+    return $ "Array " ++ acc ++ " = decode_pointer(" ++ e' ++ ")->as_array;" ++ "for (int $$i = 0; $$i < " ++ acc ++ ".length; $$i++) { " ++ rttiName ++ " " ++ (varify name) ++ " = " ++ acc ++ ".data[$$i]; " ++  s' ++ "}"
   generate (IRExpression e) = (++";") <$> generate e
   generate (IRBlock s) = do
     s' <- generate s
@@ -91,14 +91,14 @@ instance Generation IRStatement where
   generate IRContinue = return "continue;"
   generate (IRDeclarationStatement name e@(IRDictAccess _ "$$fun")) = do
     e' <- generate e
-    return $ rttiName ++ "* (*" ++ (varify name) ++ ")(Value*) = " ++ e' ++ ";"
+    return $ rttiName ++ " (*" ++ (varify name) ++ ")(" ++ rttiName ++ ") = " ++ e' ++ ";"
   generate (IRDeclarationStatement name e) = do
     e' <- generate e
-    return $ rttiName ++ "* " ++ (varify name) ++ " = " ++ e' ++ ";"
+    return $ rttiName ++ " " ++ (varify name) ++ " = " ++ e' ++ ";"
   generate (IRUpdate e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
-    return $ "update(" ++ e1' ++ ", " ++ e2' ++ ");"
+    return $ "update(&" ++ e1' ++ ", " ++ e2' ++ ");"
 
 generateString :: String -> String
 generateString [] = "emptyList()"
@@ -108,7 +108,7 @@ generateList :: MonadGeneration m => [IRExpression] -> m String
 generateList [] = return "emptyList()"
 generateList xs = do
   xs' <- mapM generate xs
-  return $ "list(" ++ show (length xs) ++ ", " ++ intercalate ", " xs' ++ ")"
+  return $ "list(" ++ show (length xs) ++ ", " ++ intercalate ", " xs'  ++ ")"
 
 instance Generation IRExpression where
   generate (IRVariable name) = return $ varify name
@@ -119,11 +119,11 @@ instance Generation IRExpression where
   generate (IRBinary "&&" e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
-    return $ "boolean(" ++ e1' ++ "->b && " ++ e2' ++ "->b)"
+    return $ "boolean(decode_boolean(" ++ e1' ++ ") && decode_boolean(" ++ e2' ++ "))"
   generate (IRBinary "||" e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
-    return $ "boolean(" ++ e1' ++ "->b || " ++ e2' ++ "->b)"
+    return $ "boolean(decode_boolean(" ++ e1' ++ ") || decode_boolean(" ++ e2' ++ "))"
   generate (IRBinary op e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
@@ -143,18 +143,20 @@ instance Generation IRExpression where
   generate (IRListAccess e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
-    return $ "index_(" ++ e1' ++ ", " ++ e2' ++ "->i)"
+    return $ "index_(" ++ e1' ++ ", decode_integer(" ++ e2' ++ "))"
   generate (IRTernary e1 e2 e3) = do
     e1' <- generate e1
     e2' <- generate e2
     e3' <- generate e3
-    return $ e1' ++ "->b ? " ++ e2' ++ " : " ++ e3'
+    return $ "decode_boolean(" ++ e1' ++ ") ? " ++ e2' ++ " : " ++ e3'
   generate (IREUpdate e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
     return $ "update(" ++ e1' ++ ", " ++ e2' ++ ");"
   generate (IRDict es) = generateStruct es
-  generate (IRDictAccess e1 "$$fun") = (++ "->$$fun") <$> generate e1
+  generate (IRDictAccess e1 "$$fun") = do
+    e1' <- generate e1
+    return $ "decode_lambda(" ++ e1' ++ ")"
   generate (IRDictAccess e1 e2) = do
     e1' <- generate e1
     return $ "property_(" ++ e1' ++ ", " ++ show e2 ++ ")"
@@ -168,10 +170,10 @@ generateStruct :: MonadGeneration m => [(String, IRExpression)] -> m String
 generateStruct [] = return "NULL"
 generateStruct xs = do
   xs' <- mapM go xs
-  return $ "structure(" ++ show (length xs) ++ ", " ++ intercalate "," xs' ++ ")"
+  return $ "structure(" ++ show (length xs) ++ ", " ++ intercalate ", " xs' ++ " )"
   where go (x, e) = do
           e' <- generate e
-          return $ "element(" ++ show x ++ ", " ++ e' ++ ")"
+          return $  show x ++ ", " ++ e'
 
 instance Generation a => Generation [a] where
   generate = (unlines <$>) . mapM generate
@@ -211,8 +213,9 @@ includeHeaders = do
   let rttiType = "std/core/type.h"
   let garbageTGC = "std/core/garbage/tgc.h"
   let garbage = "std/core/garbage.h"
+  let nanBox = "std/core/value/nanbox.h"
 
-  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, rttiType, garbageTGC, garbage]
+  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, nanBox, rttiType, garbageTGC, garbage]
 
 generateHeaders :: [String] -> String
 generateHeaders = unlines . map (\x -> "#include \"" ++ x ++ "\"")

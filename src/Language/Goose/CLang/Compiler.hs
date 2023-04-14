@@ -37,7 +37,7 @@ compileStatement (SBlock s) = IRBlock (map compileStatement s)
 compileStatement SBreak = IRBreak
 compileStatement SContinue = IRContinue
 compileStatement (SLet name e) = IRDeclarationStatement name (compileExpression e)
-compileStatement (SUpdate u e) = IRUpdate (compileUpdated u) (compileExpression e)
+compileStatement (SUpdate u e) = IRUpdate (compileExpression u) (compileExpression e)
 compileStatement (SMatch e cases) = do
   let x = compileExpression e
   let decl = IRDeclarationStatement "$$match" x
@@ -58,9 +58,9 @@ compileExpression (EApplication (EVariable "free" _) [value]) = IRApplication (I
 compileExpression (EApplication e args) = IRApplication (compileExpression e) [IRList (map compileExpression args)]
 compileExpression (EBinary op e1 e2) = case op of
   "+" -> IRApplication (IRVariable "add") [compileExpression e1, compileExpression e2]
-  "-" -> IRApplication (IRVariable "sub") [compileExpression e1, compileExpression e2]
-  "*" -> IRApplication (IRVariable "mul") [compileExpression e1, compileExpression e2]
-  "/" -> IRApplication (IRVariable "div_") [compileExpression e1, compileExpression e2]
+  "-" -> IRApplication (IRVariable "subtract") [compileExpression e1, compileExpression e2]
+  "*" -> IRApplication (IRVariable "multiply") [compileExpression e1, compileExpression e2]
+  "/" -> IRApplication (IRVariable "divide") [compileExpression e1, compileExpression e2]
   "==" -> IRApplication (IRVariable "eq") [compileExpression e1, compileExpression e2]
   "!=" -> IRApplication (IRVariable "neq") [compileExpression e1, compileExpression e2]
   "<" -> IRApplication (IRVariable "lt") [compileExpression e1, compileExpression e2]
@@ -75,14 +75,12 @@ compileExpression (EIf e t f) = IRTernary (compileExpression e) (compileExpressi
 compileExpression (EList es) = IRList (map compileExpression es)
 compileExpression (EListAccess e1 e2) = IRListAccess (compileExpression e1) (compileExpression e2)
 compileExpression (ELambda _ _) = error "Not implemented"
-compileExpression (EUpdate u e) = IREUpdate (compileUpdated u) (compileExpression e)
+compileExpression (EUpdate u e) = IREUpdate (compileExpression u) (compileExpression e)
 compileExpression (EStructure fields) = IRDict (map (second compileExpression) fields)
 compileExpression (EStructAccess e1 e2) = IRDictAccess (compileExpression e1) e2
+compileExpression (EMutable e) = IRApplication (IRVariable "create_mutable") [compileExpression e]
+compileExpression (EDereference e) = IRApplication (IRVariable "get_mutable") [compileExpression e]
 
-compileUpdated :: ANFUpdated -> IRExpression
-compileUpdated (UVariable name) = IRVariable name
-compileUpdated (UListAccess e1 e2) = IRListAccess (compileUpdated e1) (compileExpression e2)
-compileUpdated (UStructAccess e1 e2) = IRDictAccess (compileUpdated e1) e2
 
 compile :: [ANFDefinition] -> [IRToplevel]
 compile = nub . map compileToplevel
