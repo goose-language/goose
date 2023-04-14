@@ -4,89 +4,58 @@ public module Array
   declare slice[a](array: [a], idx: int): [a]
   declare length[a](array: [a]): int
   declare create[a](length: int, value: a): [a]
+  declare push[a](array: Mutable[[a]], value: a): nil
 
   def empty[a](arr: [a]): bool do return Array::length(arr) == 0 end
 
   def concat[a](arr1: [a], arr2: [a]): [a] do
-    def acc: [a] = Array::create(Array::length(arr1) + Array::length(arr2), if Array::length(arr1) > 0 then IO::clone(arr1[0]) else IO::clone(arr2[0]))
-    def i = 0
+    def arr: Mutable[[a]] = mutable []
     for item in arr1 do
-      acc[i] = item
-      i = i + 1
+      Array::push(arr, item)
     end
     for item in arr2 do
-      acc[i] = item
-      i = i + 1
+      Array::push(arr, item)
     end
-    return acc
-  end
-
-  def push[a](arr: [a], value: a): nil do
-    arr = Array::concat(arr, [value])
-    return nil
+    return *arr
   end
   
   def map[a, b](arr: [a], f: fun(a): b): [b] do
     if Array::empty(arr) then return []
-    def acc = []
+    def acc: Mutable[[b]] = mutable []
     for item in arr do
       Array::push(acc, f(item))
     end
-    return acc
+    return *acc
   end
 
   def slice[a](array: [a], idx: int): [a] do
-    def i = 0
-    def arr = []
-    while i < Array::length(array) do
-      if i >= idx then Array::push(arr, array[i])
-      i = i + 1
+    def i = mutable 0
+    def arr: Mutable[[a]] = mutable []
+    while *i < Array::length(array) do
+      if *i >= idx then Array::push(arr, array[*i])
+      i = *i + 1
     end
-    return arr
+    return *arr
   end
 
   def startsWith[a](arr: [a], prefix: [a]): bool do
     if Array::length(arr) < Array::length(prefix) then return false
-    def i = 0
+    def i = mutable 0
     for item in prefix do
-      if item != arr[i] then return false
-      i = i + 1
+      if item != arr[*i] then return false
+      i = *i + 1
     end
     return true
   end
 
-  def sort[a](array: [a], f: fun(a, b): bool): [a] do
-    def arr = IO::clone(array)
-    def i = 0
-    def j = 0
-    def len = Array::length(arr)
-    while i < len do
-      j = i
-      while j > 0 do
-        if f(arr[j], arr[j - 1]) then do
-          def tmp = arr[j]
-          arr[j] = IO::clone(arr[j - 1])
-          arr[j - 1] = tmp
-        end
-        j = j - 1
-      end
-      i = i + 1
-    end
-    return arr
-  end
-
   def reverse[a](arr: [a]): [a] do
-    def i = 0
-    def j = Array::length(arr) - 1
-    def tmp = 0
-    while i < j do
-      tmp = arr[i]
-      arr[i] = arr[j]
-      arr[j] = tmp
-      i = i + 1
-      j = j - 1
+    def i = mutable Array::length(arr) - 1
+    def acc: Mutable[[a]] = mutable []
+    while *i >= 0 do
+      Array::push(acc, arr[*i])
+      i = *i - 1
     end
-    return arr
+    return *acc
   end
   
   declare has[a](dict: a, key: string): bool
