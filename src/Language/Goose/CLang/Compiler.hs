@@ -10,13 +10,12 @@ import Language.Goose.CLang.Pattern
 import Data.Bifunctor
 import Data.List
 
-compileToplevel :: ANFDefinition -> IRToplevel
-compileToplevel (DFunction name args body) = IRFunction name args (map compileStatement body)
-compileToplevel (DDeclaration name e) = IRDeclaration name (compileExpression e)
-compileToplevel (DExtern (Annoted name _)) = IRExtern name "int"
-compileToplevel (DDeclare (Annoted name t)) = case t of
-  args :-> ret -> IRDeclare name (map from args) (from ret)
-  ty -> IRDeclare name [] (from ty)
+compileToplevel :: ANFDefinition -> Maybe IRToplevel
+compileToplevel (DFunction name args body) = Just $ IRFunction name args (map compileStatement body)
+compileToplevel (DDeclaration name e) = Just $ IRDeclaration name (compileExpression e)
+compileToplevel (DExtern (Annoted name _)) = Just $ IRExtern name "int"
+compileToplevel (DDeclare (Annoted _ _)) = Nothing
+compileToplevel (DInternDeclare name) = Just $ IRDeclare name [] rttiName 
 
 from :: Type -> CType
 from _ = rttiName
@@ -83,4 +82,4 @@ compileExpression (EDereference e) = IRApplication (IRVariable "get_mutable") [c
 
 
 compile :: [ANFDefinition] -> [IRToplevel]
-compile = nub . map compileToplevel
+compile = nub . mapMaybe compileToplevel

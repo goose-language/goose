@@ -22,6 +22,7 @@ getCLangCompiler = do
       Nothing -> error "No C compiler found"
 
 generateDefinition :: String -> String
+generateDefinition "$$init$$" = "void $$init$$();"
 generateDefinition name = rttiName ++ " " ++ varify name ++ "(" ++ rttiName ++ " args);"
 
 build :: [ANFDefinition] -> String -> [String] -> [String] -> IO ()

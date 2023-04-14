@@ -30,9 +30,16 @@ varify n = if n `elem` reservedWords then n' ++ "_" else n'
 instance Generation IRToplevel where
   generate (IRFunction name args body) = do
     body' <- generate body
-    return $ if name == "main"
-      then "int main(int argc, char **argv) { " ++ body' ++ "}"
-      else rttiName ++ " " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ " args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ " " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
+    case name of
+      "main" -> return $ "int main(int argc, char **argv) { " ++ startGarbage body' ++ "}"
+      "$$init$$" -> do
+        decls <- mapM (\x -> case x of
+          IRUpdate name e -> do
+            e' <- generate e
+            name' <- generate name
+            return $ name' ++ " = " ++ e' ++ ";") body
+        return $  "void $$init$$() {" ++ concat decls ++ "}"
+      _ ->  return $ rttiName ++ " " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ " args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ " " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
   generate (IRDeclaration name e) = do
     e' <- generate e
     return $ rttiName ++ " " ++ (varify name) ++ " = " ++ e' ++ ";"
@@ -40,9 +47,9 @@ instance Generation IRToplevel where
   generate (IRStruct name fields) = do
     fields' <- mapM generate fields
     return $ "struct " ++ (varify name) ++ " { " ++ unwords fields' ++ " };"
-  -- generate (IRDeclare name args ret) = case args of
-  --   [] -> ret ++ " " ++ name ++ ";"
-  --   _ -> ret ++ " " ++ name ++ "(" ++ intercalate ", " args ++ ");"
+  generate (IRDeclare name args ret) = case args of
+    [] -> return $ ret ++ " " ++ name ++ ";"
+    _ -> return $ ret ++ " " ++ name ++ "(" ++ intercalate ", " args ++ ");"
   generate _ = return ""
 
 instance Generation IRStructField where
