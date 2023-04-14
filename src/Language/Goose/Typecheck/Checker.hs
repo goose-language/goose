@@ -162,6 +162,14 @@ inferExpression (C.Located pos (C.Lambda args ret body)) = do
   unify (t :~: tv, pos)
   ST.modify $ \s' -> s' { returnType = ret' }
   return (map snd tvs :-> tv, A.Lambda (map (uncurry C.Annoted) tvs) e')
+inferExpression (C.Located _ (C.Mutable expr)) = do
+  (t, e') <- local' $ inferExpression expr
+  return (Mutable t, A.Mutable e')
+inferExpression (C.Located pos (C.Dereference expr)) = do
+  tv <- fresh
+  (t, e') <- local' $ inferExpression expr
+  unify (t :~: Mutable tv, pos)
+  return (tv, A.Dereference e')
 inferExpression (C.Located pos (C.Match expr cases)) = do
   (t, e') <- local' $ inferExpression expr
   (tys, cases') <- L.unzip <$> local' (CM.forM cases (\(pat, expr') -> do
@@ -185,20 +193,10 @@ inferUpdate (C.Located pos (C.VariableUpdate (D.Simple name))) = do
   case M.lookup name env of
     Nothing -> E.throwError ("Unbound variable: " ++ name, Nothing, pos)
     Just scheme -> do
+      tv <- fresh
       t <- instantiate scheme
-      return (t, A.VariableUpdate name t)
-inferUpdate (C.Located pos (C.ListUpdate up index)) = do
-  tv <- fresh
-  (t, e') <- local' $ inferUpdate up
-  unify (t :~: TList tv, pos)
-  (t', e'') <- local' $ inferExpression index
-  unify (t' :~: Int, pos)
-  return (tv, A.ListUpdate e' e'')
-inferUpdate (C.Located pos (C.StructureUpdate up field)) = do
-  tv <- fresh
-  (t, e') <- local' $ inferUpdate up
-  unify (Field field tv t, pos)
-  return (tv, A.StructureUpdate e' field)
+      unify (t :~: Mutable tv, pos)
+      return (tv, A.VariableUpdate name t)
 inferUpdate (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 inferPattern :: MonadChecker m => C.Located P.Pattern -> m (Type, A.Pattern, M.Map String Scheme)

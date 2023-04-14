@@ -24,6 +24,9 @@ instance Parser a => Parser (Maybe a) where
 instance Parser D.Declaration where
   toWithEnv = go
     where go :: T.MonadChecker m => D.Declaration -> M.Map String T.Type -> m T.Type
+          go (D.Constructor (D.ID (D.Simple "Mutable")) [x]) env = do
+            t <- go x env
+            return (T.Mutable t)
           go (D.Constructor (D.ID (D.Simple v)) xs) env = do
             aliases <- ST.gets T.aliases
             xs' <- mapM (flip go env) xs

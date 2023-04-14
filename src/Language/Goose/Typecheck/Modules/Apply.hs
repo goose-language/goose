@@ -2,7 +2,7 @@
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE FlexibleInstances #-}
 module Language.Goose.Typecheck.Modules.Apply where
-import Language.Goose.Typecheck.Definition.Type
+import qualified Language.Goose.Typecheck.Definition.Type as T
 import Language.Goose.Typecheck.Definition.AST
 import Language.Goose.Typecheck.Modules.Substitution
 import Language.Goose.CST.Located
@@ -10,12 +10,12 @@ import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Language.Goose.CST.Annoted as C
 
-type Variables = M.Map String Scheme
+type Variables = M.Map String T.Scheme
 type Environment = (Variables, Variables)
 
 data ConstraintConstructor
-  = Type :~: Type
-  | Field {- named -} String {- of -} Type {- in -} Type
+  = T.Type :~: T.Type
+  | Field {- named -} String {- of -} T.Type {- in -} T.Type
 type Constraint = (ConstraintConstructor, Position)
 
 instance {-# OVERLAPPING #-} Types Constraint where
@@ -39,28 +39,28 @@ instance Types ConstraintConstructor where
 compose :: Substitution -> Substitution -> Substitution
 compose s1 s2 = M.map (apply s1) s2 `M.union` M.map (apply s2) s1
 
-instance Types Type where
-  free (TVar i) = S.singleton i
-  free Int = S.empty
-  free (TApp n xs) = free n `S.union` free xs
-  free Bool = S.empty
-  free Float = S.empty
-  free Void = S.empty
-  free (TId _) = S.empty
-  free Char = S.empty
-  free (TRec xs) = free xs
+instance Types T.Type where
+  free (T.TVar i) = S.singleton i
+  free T.Int = S.empty
+  free (T.TApp n xs) = free n `S.union` free xs
+  free T.Bool = S.empty
+  free T.Float = S.empty
+  free T.Void = S.empty
+  free (T.TId _) = S.empty
+  free T.Char = S.empty
+  free (T.TRec xs) = free xs
 
-  apply s (TVar i) = case M.lookup i s of
+  apply s (T.TVar i) = case M.lookup i s of
     Just t -> t
-    Nothing -> TVar i
-  apply s (TApp n xs) = TApp (apply s n) $ apply s xs
-  apply _ Int = Int
-  apply _ Bool = Bool
-  apply _ Float = Float
-  apply _ Void = Void
-  apply _ (TId s) = TId s
-  apply _ Char = Char
-  apply s (TRec xs) = TRec $ apply s xs
+    Nothing -> T.TVar i
+  apply s (T.TApp n xs) = T.TApp (apply s n) $ apply s xs
+  apply _ T.Int = T.Int
+  apply _ T.Bool = T.Bool
+  apply _ T.Float = T.Float
+  apply _ T.Void = T.Void
+  apply _ (T.TId s) = T.TId s
+  apply _ T.Char = T.Char
+  apply s (T.TRec xs) = T.TRec $ apply s xs
 
 instance Types Char where
   free _ = S.empty
@@ -70,9 +70,9 @@ instance Types a => Types [a] where
   free = foldr (S.union . free) S.empty
   apply s = map (apply s)
 
-instance Types Scheme where
-  free (Forall v t) = free t S.\\ S.fromList v
-  apply s (Forall v t) = Forall v (apply (foldr M.delete s v) t)
+instance Types T.Scheme where
+  free (T.Forall v t) = free t S.\\ S.fromList v
+  apply s (T.Forall v t) = T.Forall v (apply (foldr M.delete s v) t)
 
 instance Types Variables where
   free = free . M.elems
@@ -121,6 +121,8 @@ instance Types Expression where
   apply s (Binary op e1 e2) = Binary op (apply s e1) $ apply s e2
   apply s (Structure fields) = Structure $ apply s fields
   apply s (StructureAccess e f) = StructureAccess (apply s e) f
+  apply s (Mutable e) = Mutable $ apply s e
+  apply s (Dereference e) = Dereference $ apply s e
 
 instance Types Updated where
   free _ = undefined
