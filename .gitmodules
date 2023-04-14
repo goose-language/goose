@@ -1,3 +1,6 @@
 [submodule "std/core/garbage"]
 	path = std/core/garbage
 	url = https://github.com/orangeduck/tgc
+[submodule "std/core/value"]
+	path = std/core/value
+	url = https://github.com/zuiderkwast/nanbox

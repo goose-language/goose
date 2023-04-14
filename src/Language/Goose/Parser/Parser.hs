@@ -27,6 +27,7 @@ parseExpression :: Monad m => L.Goose m C.Expression
 parseExpression = E.buildExpressionParser table parseTerm
   where table = [
             [ E.Postfix $ makeUnaryOp postfix ],
+            [ E.Prefix $ makeUnaryOp deref ],
             equalities,
             logicalP,
             [ E.Infix (L.reservedOp "*" >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary "*" x y C.:>: (s, e))) E.AssocLeft,
@@ -48,6 +49,12 @@ parseExpression = E.buildExpressionParser table parseTerm
           i <- L.brackets parseExpression
           s <- P.getPosition
           return $ \x@(C.Located (pos, _) _) -> C.ListAccess x i C.:>: (pos, s)
+        
+        deref = do
+          L.reservedOp "*"
+          s <- P.getPosition
+          return $ \x@(C.Located (pos, _) _) -> C.Dereference x C.:>: (pos, s)
+
         logicalOp = ["&&", "||"]
         logicalP = map (\op -> E.Infix (L.reservedOp op >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary op x y C.:>: (s, e))) E.AssocLeft) logicalOp
         equalityOp = ["==", "!=", "<", ">", "<=", ">="]
@@ -57,6 +64,7 @@ parseTerm :: Monad m => L.Goose m C.Expression
 parseTerm = P.choice [
     P.try parseFunction,
     L.parens parseExpression,
+    parseMutable,
     parseObject,
     parseUpdate,
     parseMatch,
@@ -70,6 +78,12 @@ parseTerm = P.choice [
     parseSequence,
     parseReturn
   ]
+
+parseMutable :: Monad m => L.Goose m C.Expression
+parseMutable = L.locate $ do
+  L.reserved "mutable"
+  expr <- parseExpression
+  return $ C.Mutable expr
 
 parseLiteral :: Monad m => L.Goose m C.Expression
 parseLiteral = P.choice [
@@ -204,20 +218,7 @@ parseUpdate = L.locate $ do
   return $ C.Update var value
 
 parseVariableUpdate :: Monad m => L.Goose m C.Updated
-parseVariableUpdate = E.buildExpressionParser table parseUpdateTerm
-  where table = [
-            [ E.Postfix $ makeUnaryOp (index P.<|> property) ]
-          ]
-        index = do
-          i <- L.brackets parseExpression
-          s <- P.getPosition
-          return $ \x@(C.Located (pos, _) _) -> C.ListUpdate x i C.:>: (pos, s)
-        property = do
-          L.reservedOp "."
-          name <- L.identifier
-          s <- P.getPosition
-          return $ \x@(C.Located (pos, _) _) -> C.StructureUpdate x name C.:>: (pos, s)
-        parseUpdateTerm = P.choice [
-            L.locate $ C.VariableUpdate <$> P.parseNamespaced,
-            L.parens parseVariableUpdate
-          ]
+parseVariableUpdate = P.choice [
+    L.locate $ C.VariableUpdate <$> P.parseNamespaced,
+    L.parens parseVariableUpdate
+  ]
