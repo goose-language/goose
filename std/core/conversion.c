@@ -31,7 +31,7 @@ int decode_boolean(nanbox_t v) {
 
 char* decode_string(nanbox_t v) {
   HeapValue* heap = decode_pointer(v);
-  char* string = (char*) malloc(sizeof(char) * (heap->as_array.length + 1));
+  char* string = (char*) tgc_alloc(gc(), sizeof(char) * (heap->as_array.length + 1));
 
   for (int i = 0; i < heap->as_array.length; i++) {
     string[i] = decode_character(heap->as_array.data[i]);

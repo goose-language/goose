@@ -45,7 +45,7 @@ nanbox_t Array_push(nanbox_t args) {
     list_.data[list_.length] = value;
     list_.length = list_.length + 1;
 
-    HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
+    HeapValue* ptr = (HeapValue*)tgc_alloc(gc(), sizeof(HeapValue));
     ptr->type = TYPE_ARRAY;
     ptr->as_array = list_;
 
@@ -117,25 +117,25 @@ nanbox_t IO_clone(nanbox_t args)
       result = item;
       break;
     case TYPE_ARRAY: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
+      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
       heap->type = TYPE_ARRAY;
       heap->as_array.length = decode_pointer(item)->as_array.length;
-      heap->as_array.data = malloc(sizeof(nanbox_t) * heap->as_array.length);
+      heap->as_array.data = tgc_alloc(gc(), sizeof(nanbox_t) * heap->as_array.length);
       for (int i = 0; i < heap->as_array.length; i++) {
         heap->as_array.data[i] = IO_clone(list(1, decode_pointer(item)->as_array.data[i]));
       }
       return create_pointer(heap);
     }
     case TYPE_DICT: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
+      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
       heap->type = TYPE_DICT;
       HeapValue* item_ = decode_pointer(item);
       heap->as_dict.length = item_->as_dict.length;
-      heap->as_dict.values = malloc(sizeof(nanbox_t) * heap->as_dict.length);
-      heap->as_dict.keys = malloc(sizeof(char*) * heap->as_dict.length);
+      heap->as_dict.values = tgc_alloc(gc(), sizeof(nanbox_t) * heap->as_dict.length);
+      heap->as_dict.keys = tgc_alloc(gc(), sizeof(char*) * heap->as_dict.length);
       for (int i = 0; i < heap->as_dict.length; i++) {
         heap->as_dict.values[i] = IO_clone(list(1, item_->as_dict.values[i]));
-        heap->as_dict.keys[i] = malloc(sizeof(char) * strlen(item_->as_dict.keys[i]));
+        heap->as_dict.keys[i] = tgc_alloc(gc(), sizeof(char) * strlen(item_->as_dict.keys[i]));
         strcpy(heap->as_dict.keys[i], item_->as_dict.keys[i]);
       }
       return create_pointer(heap);
@@ -144,7 +144,7 @@ nanbox_t IO_clone(nanbox_t args)
       result = unit();
       break;
     case TYPE_LAMBDA: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
+      HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
       heap->type = TYPE_LAMBDA;
       heap->as_lambda = decode_pointer(item)->as_lambda;
       return create_pointer(heap);
@@ -161,11 +161,11 @@ nanbox_t Array_create(nanbox_t args) {
   nanbox_t value = index_(args, 1);
 
   int size_ = decode_integer(size);
-  nanbox_t* data = malloc(sizeof(nanbox_t) * size_);
+  nanbox_t* data = tgc_alloc(gc(), sizeof(nanbox_t) * size_);
   for (int i = 0; i < size_; i++) {
     data[i] = IO_clone(list(1, value));
   }
-  HeapValue* heap = malloc(sizeof(HeapValue));
+  HeapValue* heap = tgc_alloc(gc(), sizeof(HeapValue));
   heap->type = TYPE_ARRAY;
   heap->as_array.length = size_;
   heap->as_array.data = data;

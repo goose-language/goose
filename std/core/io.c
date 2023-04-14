@@ -40,7 +40,7 @@ nanbox_t IO_readDirectory(nanbox_t args) {
 
 HeapValue* getVariantArguments(nanbox_t dict) {
   Dict heap = decode_pointer(dict)->as_dict;
-  nanbox_t* data = malloc(sizeof(nanbox_t) * heap.length);
+  nanbox_t* data = tgc_alloc(gc(), sizeof(nanbox_t) * heap.length);
   int j = 0; 
   for (int i = 0; i < heap.length; i++) {
     if (strcmp(heap.keys[i], "$$enum") == 0) continue;
@@ -50,7 +50,7 @@ HeapValue* getVariantArguments(nanbox_t dict) {
     j++;
   }
 
-  HeapValue* result = malloc(sizeof(HeapValue));
+  HeapValue* result = tgc_alloc(gc(), sizeof(HeapValue));
   result->type = TYPE_ARRAY;
   result->as_array.length = heap.length - 2;
   result->as_array.data = data;
@@ -129,6 +129,11 @@ nanbox_t IO_print(nanbox_t args) {
       printf("mutable ");
       IO_print(list(1, value));
     }
+
+    case TYPE_LAMBDA: {
+      printf("lambda<#%p>", decode_pointer(v));
+      break;
+    }
   }
 }
 
@@ -196,7 +201,7 @@ nanbox_t IO_readFile(nanbox_t args) {
   fseek(file, 0L, SEEK_END);
   size_t len = ftell(file);
   rewind(file);
-  char* buffer = malloc(sizeof(char) * len);
+  char* buffer = tgc_alloc(gc(), sizeof(char) * len);
   int i = 0;
   char c;
   while ((c = fgetc(file)) != EOF) {

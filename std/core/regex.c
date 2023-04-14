@@ -28,7 +28,7 @@ nanbox_t Regex_get(nanbox_t args) {
   end = (int)match.rm_eo;
   len = end-begin;
 
-  word = (char*) malloc(sizeof(char) * (len + 1));
+  word = (char*) tgc_alloc(gc(), sizeof(char) * (len + 1));
   int j = 0;
   for (int i = begin; i < end; i++) {
     word[j] = string_[i];
