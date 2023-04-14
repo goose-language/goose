@@ -99,7 +99,7 @@ stringLiteral :: Monad m => L.Goose m C.Expression -> L.Goose m C.Expression
 stringLiteral p = L.lexeme $ do
   s <- P.getPosition
   _ <- P.char '"'
-  cs <- (P.many1 $ (P.string "{" *> p <* P.string "}" 
+  cs <- (P.many1 $ (P.try (P.between (P.string "#{") (P.char '}') p)
               >>= \x@(C.Located pos _) -> 
                 return (C.Application (C.Variable (D.Namespaced ["String"] "from") C.:>: pos) [x] C.:>: pos)) 
             P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)) P.<|> return []

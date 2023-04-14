@@ -103,10 +103,10 @@ charEscape :: Monad m => Parser m Char
 charEscape = do{ _ <- char '\\'; escapeCode }
 
 charLetter :: Monad m => Parser m Char
-charLetter = satisfy (\c -> (c /= '\"') && (c /= '{') && (c /= '\\') && (c > '\026'))
+charLetter = satisfy (\c -> (c /= '\"') && (c /= '\\') && (c > '\026'))
 
 escapeCode :: Monad m => Parser m Char
-escapeCode = charEsc <|> charNum <|> charAscii <|> charControl
+escapeCode = charEsc <|> charNum <|> charAscii <|> charControl <|> charLetter
 
 charControl :: Monad m => Parser m Char
 charControl = do
