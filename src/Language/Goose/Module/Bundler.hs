@@ -68,9 +68,16 @@ analyseToplevel (Function (C.Annoted name ret) gens args body :>: pos) = do
   body' <- local' (\s -> s { mappings = M.insert name' new (M.union env' (mappings s)) }) $ do
     resolveImportedExpressions body
   return [Function (C.Annoted new ret) gens (zipWith C.Annoted args' tys) body' :>: pos]
-analyseToplevel (Namespace name toplevels :>: _) = do
+analyseToplevel (Namespace name toplevels :>: pos) = do
   case name of
-    "_" -> keepPublic . concat <$> mapM analyseToplevel toplevels
+    "_" -> do
+      toplevels <- local' (const emptyBundling) $ keepPublic . concat <$> mapM analyseToplevel toplevels
+      return toplevels
+    '$':name' -> do
+      ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name'] }
+      toplevels' <- local' (const emptyBundling) $ concat <$> mapM analyseToplevel toplevels
+      ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
+      return $ (keepPublic toplevels')
     _ -> do
       ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name] }
       toplevels' <- concat <$> mapM analyseToplevel toplevels
