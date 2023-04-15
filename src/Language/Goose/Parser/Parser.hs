@@ -18,7 +18,7 @@ import Control.Applicative
 type SourceFile = String
 
 parseGoose :: Monad m => SourceFile -> String -> m (Either P.ParseError [C.Located C.Toplevel])
-parseGoose file content = P.runParserT (L.whiteSpace *> P.many (T.parseToplevel parseExpression) <* P.eof) () file content
+parseGoose = P.runParserT (L.whiteSpace *> P.many (T.parseToplevel parseExpression) <* P.eof) ()
 
 makeUnaryOp :: Alternative f => f (a -> a) -> f (a -> a)
 makeUnaryOp s = foldr1 (.) . reverse <$> some s
@@ -49,7 +49,7 @@ parseExpression = E.buildExpressionParser table parseTerm
           i <- L.brackets parseExpression
           s <- P.getPosition
           return $ \x@(C.Located (pos, _) _) -> C.ListAccess x i C.:>: (pos, s)
-        
+
         deref = do
           L.reservedOp "*"
           s <- P.getPosition
@@ -82,15 +82,14 @@ parseTerm = P.choice [
 parseMutable :: Monad m => L.Goose m C.Expression
 parseMutable = L.locate $ do
   L.reserved "mutable"
-  expr <- parseExpression
-  return $ C.Mutable expr
+  C.Mutable <$> parseExpression
 
 parseLiteral :: Monad m => L.Goose m C.Expression
 parseLiteral = P.choice [
-    L.locate $ C.Literal <$> C.Int <$> L.integer,
-    L.locate $ C.Literal <$> C.Float <$> L.float,
-    L.locate $ C.Literal <$> C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
-    L.locate $ C.Literal <$> C.Char <$> L.charLiteral,
+    L.locate $ C.Literal . C.Int <$> L.integer,
+    L.locate $ C.Literal . C.Float <$> L.float,
+    L.locate $ C.Literal . C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
+    L.locate $ C.Literal . C.Char <$> L.charLiteral,
     stringLiteral parseExpression,
     L.locate $ C.Literal <$> (C.Unit <$ L.reserved "nil")
   ]
@@ -99,10 +98,10 @@ stringLiteral :: Monad m => L.Goose m C.Expression -> L.Goose m C.Expression
 stringLiteral p = L.lexeme $ do
   s <- P.getPosition
   _ <- P.char '"'
-  cs <- (P.many1 $ (P.try (P.between (P.string "#{") (P.char '}') p)
-              >>= \x@(C.Located pos _) -> 
-                return (C.Application (C.Variable (D.Namespaced ["String"] "from") C.:>: pos) [x] C.:>: pos)) 
-            P.<|> (L.locate $ P.many1 L.characterChar >>= return . C.Literal . C.String)) P.<|> return []
+  cs <- P.many1 ((P.try (P.char '{' *> p <* P.char '}')
+              >>= \x@(C.Located pos _) ->
+                return (C.Application (C.Variable (D.Namespaced ["String"] "from") C.:>: pos) [x] C.:>: pos))
+            P.<|> L.locate (P.many1 L.characterChar F.<&> (C.Literal . C.String))) P.<|> return []
   _ <- P.char '"'
   e <- P.getPosition
   return $ case cs of
@@ -124,7 +123,7 @@ parseMatch = L.locate $ do
           return (pattern', expr)
 
 parseObject :: Monad m => L.Goose m C.Expression
-parseObject = L.locate $ do
+parseObject = L.locate $
   C.Structure <$> L.braces (L.commaSep parseField)
   where parseField = do
           name <- L.identifier
@@ -182,7 +181,7 @@ parseWhile = L.locate $ do
 parseFunction :: Monad m => L.Goose m C.Expression
 parseFunction = L.locate $ do
   L.reserved "fun"
-  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> (P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration)))
+  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> P.optionMaybe (L.reservedOp ":" *> D.parseDeclaration)))
   (ret, body) <- P.choice [
       P.try $ do
         L.reservedOp ":"
@@ -214,8 +213,7 @@ parseFor = L.locate $ do
 parseUpdate :: Monad m => L.Goose m C.Expression
 parseUpdate = L.locate $ do
   var <- P.try $ parseVariableUpdate <* L.reservedOp "="
-  value <- parseExpression
-  return $ C.Update var value
+  C.Update var <$> parseExpression
 
 parseVariableUpdate :: Monad m => L.Goose m C.Updated
 parseVariableUpdate = P.choice [

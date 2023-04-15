@@ -10,7 +10,7 @@ type Parser m a  = ParsecT String () m a
 
 languageDef :: Monad m => Token.GenLanguageDef String u m
 languageDef =
-  Token.LanguageDef {  
+  Token.LanguageDef {
               Token.commentStart    = "/*"
             , Token.commentEnd      = "*/"
             , Token.commentLine     = "//"
@@ -82,7 +82,7 @@ decimal :: Monad m => Parser m Integer
 decimal = Token.decimal lexer
 
 lexeme :: Monad m => Parser m a -> Parser m a
-lexeme = Token.lexeme lexer 
+lexeme = Token.lexeme lexer
 
 lowered :: Monad m => Parser m String
 lowered = lexeme $ do
@@ -103,7 +103,7 @@ charEscape :: Monad m => Parser m Char
 charEscape = do{ _ <- char '\\'; escapeCode }
 
 charLetter :: Monad m => Parser m Char
-charLetter = satisfy (\c -> (c /= '\"') && (c /= '\\') && (c > '\026'))
+charLetter = satisfy (\c -> (c /= '\"') && (c /= '{') && (c /= '\\') && (c > '\026'))
 
 escapeCode :: Monad m => Parser m Char
 escapeCode = charEsc <|> charNum <|> charAscii <|> charControl <|> charLetter
@@ -121,13 +121,13 @@ charNum = do
   if code > 0x10FFFF
     then fail "invalid escape sequence"
     else return (toEnum (fromInteger code))
-                        
+
 number :: Monad m => Integer -> Parser m Char -> Parser m Integer
 number base baseDigit = do
   digits <- many1 baseDigit
   let n = foldl (\x d -> base*x + toInteger (digitToInt d)) 0 digits
   seq n (return n)
-    
+
 charEsc :: Monad m => Parser m Char
 charEsc = choice (map parseEsc escMap)
   where
@@ -139,7 +139,7 @@ charAscii = choice (map parseAscii asciiMap)
     parseAscii (asc,code) = try (do{ _ <- string asc; return code })
 
 escMap :: [(Char, Char)]
-escMap = zip ("abfnrtv\\\"\'") ("\a\b\f\n\r\t\v\\\"\'")
+escMap = zip "{abf{rtv\\\"\'" "{\a\b\f\n\r\t\v\\\"\'"
 
 asciiMap :: [(String, Char)]
 asciiMap = zip (ascii3codes ++ ascii2codes) (ascii3 ++ ascii2)
