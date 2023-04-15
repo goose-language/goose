@@ -118,7 +118,7 @@ library
 
     -- Other library packages from which modules are imported.
     build-depends:    
-        base ^>=4.17.0.0
+        base
       , parsec
       , mtl
       , containers
@@ -149,7 +149,7 @@ executable goose
 
     -- Other library packages from which modules are imported.
     build-depends:
-        base ^>=4.17.0.0,
+        base,
         goose
 
     -- Directories containing source files.
