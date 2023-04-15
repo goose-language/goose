@@ -26,10 +26,10 @@ jobs:
     name: Build Goose
     steps:
       - uses: actions/checkout@master
-      - uses: haskell/actions/setup@v1.2
+      - uses: haskell/actions/setup@v2
         with:
-          ghc-version: 9.4.2
-          cabal-version: 3.0
+          ghc-version: '8.10.7'
+          cabal-version: '3.0.0.0'
       
       - name: Compile and ZIP Goose on Unix
         if: matrix.platform != 'windows-latest'
