@@ -35,7 +35,8 @@ jobs:
         if: matrix.platform != 'windows-latest'
         run: |
           cabal build
-          find dist-newstyle -type f -name 'goose' -exec mv '{}' goose \;
+          goose=$(cabal list-bin goose)
+          mv $goose ./goose
           zip -r 'goose-${{ matrix.platform }}.zip' goose std README.md
           
       - name: Compile and ZIP Goose on Windows
