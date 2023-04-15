@@ -74,7 +74,6 @@ jobs:
           cabal build
       - name: Create ZIP archive
         run: |
-          cabal build
           $goose = cabal list-bin goose
           Move-Item -Path $goose -Destination ./goose.exe
           Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath $ZIPNAME
@@ -132,6 +131,8 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           tag_name: ${{ steps.split.outputs._2 }}
+      - name: List all folders
+        run: ls
       - name: Upload Release Asset
         id: upload-release-asset
         uses: actions/upload-release-asset@v1.0.1
