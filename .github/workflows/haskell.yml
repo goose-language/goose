@@ -29,11 +29,14 @@ jobs:
         run: |
           find dist-newstyle -type f -name 'goose' -exec mv '{}' goose \;
           zip -r $ZIPNAME goose std README.md
-      - name: Create artifact
-        uses: actions/upload-artifact@v2
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          name: linux
-          path: goose_linux.zip
+          files: goose_linux.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_REPOSITORY: goose-language/goose
 
   build-macos:
     runs-on: macos-latest
@@ -58,6 +61,14 @@ jobs:
         with:
           name: macos
           path: goose_macos.zip
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: goose_macos.zip
+          token: ${{ secrets.GITHUB_TOKEN }}
+        env:
+          GITHUB_REPOSITORY: goose-language/goose
 
   build-windows:
     runs-on: windows-latest
@@ -75,26 +86,11 @@ jobs:
         run: |
           Get-ChildItem -Filter goose.exe -Recurse $pwd | Foreach {mv $_.fullname goose.exe}
           Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath goose_windows.zip
-      - name: Create artifact
-        uses: actions/upload-artifact@v2
-        with:
-          name: windows
-          path: goose_windows.zip
-
-  publish:
-    needs: [build-linux, build-macos, build-windows]
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        version: [linux, macos, windows]
-    steps:
-      - uses: actions/checkout@v1
-      - run: ls
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: goose_${{ matrix.version }}.zip
+          files: goose_windows.zip
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_REPOSITORY: goose-language/goose
