@@ -3,7 +3,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 module Log.Error where
   import Error.Diagnose.Compat.Parsec ( errorDiagnosticFromParseError, HasHints(..) )
-  import Error.Diagnose               ( addFile, printDiagnostic, stderr, defaultStyle, Position (Position), Marker (This), def, stdout, addReport, err )
+  import Error.Diagnose               ( addFile, printDiagnostic, stderr, defaultStyle, Position (Position), Marker (This), def, stdout, addReport, Report(Err), Note (Note) )
   import Data.Void                    ( Void )
   import Text.Parsec                  ( SourcePos, sourceColumn, sourceLine, sourceName, ParseError )
   import Data.Maybe                   ( maybeToList )
@@ -18,11 +18,11 @@ module Log.Error where
     let file' = sourceName p1
     x' <- readFile file'
     let pos' = Position p1' p2' $ sourceName p1
-    let beautifulExample = err
+    let beautifulExample = Err
           Nothing
           error'
           [ (pos', This step) ]
-          (maybeToList msg)
+          (map Note $ maybeToList msg)
 
     -- Create the diagnostic 
     let diagnostic  = addFile def file' x'
