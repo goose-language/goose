@@ -58,8 +58,6 @@ jobs:
 
   build-windows:
     runs-on: windows-latest
-    env:
-      ZIPNAME: goose_windows.zip
     steps:
       - uses: actions/checkout@master
       - uses: haskell/actions/setup@v2
@@ -73,7 +71,7 @@ jobs:
       - name: Create ZIP archive
         run: |
           Get-ChildItem -Filter goose.exe -Recurse $pwd | Foreach {mv $_.fullname goose.exe}
-          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath $ZIPNAME
+          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath goose_windows.zip
       - name: Create artifact
         uses: actions/upload-artifact@v2
         with:
