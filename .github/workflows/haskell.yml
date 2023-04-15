@@ -36,14 +36,14 @@ jobs:
         run: |
           cabal build
           find dist-newstyle -type f -name 'goose' -exec mv '{}' goose \;
-          zip -r 'goose-${{ matrix.platform }}.zip' goose library README.md
+          zip -r 'goose-${{ matrix.platform }}.zip' goose std README.md
           
       - name: Compile and ZIP Goose on Windows
         if: matrix.platform == 'windows-latest'
         run: |
           cabal build
           Get-ChildItem -Filter goose.exe -Recurse $pwd | Foreach {mv $_.fullname goose.exe}
-          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, library, README.md -DestinationPath 'goose-${{ matrix.platform }}.zip' 
+          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath 'goose-${{ matrix.platform }}.zip' 
         
       - uses: AButler/upload-release-assets@v2.0
         with:
