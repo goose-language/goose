@@ -28,8 +28,8 @@ jobs:
       - uses: actions/checkout@master
       - uses: haskell/actions/setup@v2
         with:
-          ghc-version: '8.10.7'
-          cabal-version: '3.8'
+          ghc-version: '9.4.2'
+          cabal-version: '3.10'
       
       - name: Compile and ZIP Goose on Unix
         if: matrix.platform != 'windows-latest'
