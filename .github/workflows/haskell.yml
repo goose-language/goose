@@ -1,53 +1,144 @@
+name: Build binary artifacts
+
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      logLevel:
-        description: 'Log level'
-        required: true
-        default: 'warning'
-        type: choice
-        options:
-        - info
-        - warning
-        - debug
-      tags:
-        description: 'Test scenario tags'
-        required: false
-        type: boolean
+  push:
+    tags:
+      - weekly.**
+      - 0.**
+
 jobs:
-  build:
-    strategy:
-      matrix:
-        platform: [ubuntu-latest, macos-latest, windows-latest]
-    runs-on: ${{ matrix.platform }}
-    
-    name: Build Goose
+
+  build-linux:
+    runs-on: ubuntu-20.04
+    env:
+      ZIPNAME: goose_linux.zip
     steps:
       - uses: actions/checkout@master
       - uses: haskell/actions/setup@v2
         with:
           ghc-version: '9.4.2'
           cabal-version: '3.10'
-      
-      - name: Compile and ZIP Goose on Unix
-        if: matrix.platform != 'windows-latest'
+      - uses: actions/checkout@v1
+      - name: Compile
         run: |
           cabal build
+      - name: Create ZIP archive
+        run: |
           goose=$(cabal list-bin goose)
           mv $goose ./goose
-          zip -r 'goose-${{ matrix.platform }}.zip' goose std README.md
-          
-      - name: Compile and ZIP Goose on Windows
-        if: matrix.platform == 'windows-latest'
+          zip -r $ZIPNAME goose std README.md
+      - name: Create artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux
+          path: goose_linux.zip
+
+  build-macos:
+    runs-on: macos-latest
+    env:
+      ZIPNAME: goose_macos.zip
+    steps:
+      - uses: actions/checkout@master
+      - uses: haskell/actions/setup@v2
+        with:
+          ghc-version: '9.4.2'
+          cabal-version: '3.10'
+      - uses: actions/checkout@v1
+      - name: Compile
+        run: |
+          cabal build
+      - name: Create ZIP archive
+        run: |
+          goose=$(cabal list-bin goose)
+          mv $goose ./goose
+          zip -r $ZIPNAME goose std README.md
+      - name: Create artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos
+          path: goose_macos.zip
+
+  build-windows:
+    runs-on: windows-latest
+    env:
+      ZIPNAME: goose_windows.zip
+    steps:
+      - uses: actions/checkout@master
+      - uses: haskell/actions/setup@v2
+        with:
+          ghc-version: '9.4.2'
+          cabal-version: '3.10'
+      - uses: actions/checkout@v1
+      - name: Compile
+        run: |
+          cabal build
+      - name: Create ZIP archive
         run: |
           cabal build
           $goose = cabal list-bin goose
           Move-Item -Path $goose -Destination ./goose.exe
-          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath 'goose-${{ matrix.platform }}.zip' 
-        
-      - uses: AButler/upload-release-assets@v2.0
+          Compress-Archive -CompressionLevel Optimal -Force -Path goose.exe, std, README.md -DestinationPath $ZIPNAME
+      - name: Create artifact
+        uses: actions/upload-artifact@v2
         with:
-          files: './goose-${{ matrix.platform }}.zip'
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          name: windows
+          path: goose_windows.zip
+
+  release:
+    name: Create Github Release
+    needs: [build-linux, build-windows, build-macos]
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Get short tag name
+        uses: jungwinter/split@v1
+        id: split
+        with:
+          msg: ${{ github.ref }}
+          seperator: /
+      - name: Create Release
+        id: create_release
+        uses: ncipollo/release-action@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.split.outputs._2 }}
+          name: ${{ steps.split.outputs._2 }}
+          commit: ${{ github.sha }}
+          draft: false
+          prerelease: false
+
+  publish:
+    needs: [release]
+    runs-on: ubuntu-20.04
+    strategy:
+      matrix:
+        version: [linux, macos, windows]
+    steps:
+      - uses: actions/checkout@v1
+      - name: Fetch artifacts
+        uses: actions/download-artifact@v1
+        with:
+          name: ${{ matrix.version }}
+          path: ./${{ matrix.version }}
+      - name: Get short tag name
+        uses: jungwinter/split@v1
+        id: split
+        with:
+          msg: ${{ github.ref }}
+          seperator: /
+      - name: Get release
+        id: get_release_info
+        uses: leahlundqvist/get-release@v1.3.1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          tag_name: ${{ steps.split.outputs._2 }}
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1.0.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.get_release_info.outputs.upload_url }}
+          asset_path: ${{ matrix.version }}/goose_${{ matrix.version }}.zip
+          asset_name: goose_${{ matrix.version }}.zip
+          asset_content_type: application/zip
