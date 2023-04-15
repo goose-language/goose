@@ -22,7 +22,7 @@ double decode_floating(nanbox_t v) {
 }
 
 char decode_character(nanbox_t v) {
-  return ((HeapValue*) nanbox_to_pointer(v))->as_char;
+  return decode_pointer(v)->as_char;
 }
 
 int decode_boolean(nanbox_t v) {

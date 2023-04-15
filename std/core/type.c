@@ -56,21 +56,24 @@ char* toString_(nanbox_t value, int depth) {
         return result;
       }
       if (get_type(array.data[0]) == TYPE_CHAR) {
-        char* result = malloc(sizeof(char) * (array.length + 3));
-        int i = 0;
         if (depth > 0) {
-          result[i] = '"';
-          i += 1;
+          char* result = malloc(sizeof(char) * 2);
+          result[0] = '"';
+          for (int i = 0; i < array.length; i++) {
+            char c = decode_character(array.data[i]);
+            result[i + 1] = c;
+          }
+          strcat(result, "\"\0");
+          return result;
+        } else {
+          char* result = malloc(sizeof(char) * (array.length + 1));
+          int i = 0;
+          for (;i < array.length; i++) {
+            result[i] = decode_character(array.data[i]);
+          }
+          result[i] = '\0';
+          return result;
         }
-        for (;i < array.length + 1; i++) {
-          result[i] = decode_character(array.data[i - 1]);
-        }
-        if (depth > 0) {
-          result[i] = '"';
-          i += 1;
-        }
-        result[i] = '\0';
-        return result;
       }
       strcat(result, "[");
       for (int i = 0; i < array.length; i++) {

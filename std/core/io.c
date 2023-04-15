@@ -227,7 +227,7 @@ nanbox_t IO_input(nanbox_t args) {
   nanbox_t prompt = index_(args, 0);
 
   printf("%s", decode_string(prompt));
-  char* buffer;
+  char* buffer = malloc(sizeof(char) * 100);
   scanf("%s", buffer);
   return string(buffer);
 }
