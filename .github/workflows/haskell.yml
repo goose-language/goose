@@ -93,7 +93,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: ${{ matrix.version }}/goose_${{ matrix.version }}.zip
+          files: goose_${{ matrix.version }}.zip
           token: ${{ secrets.GITHUB_TOKEN }}
         env:
           GITHUB_REPOSITORY: goose-language/goose
