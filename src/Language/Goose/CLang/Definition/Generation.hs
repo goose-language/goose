@@ -204,9 +204,10 @@ includeLibrary = do
   let rttiError = "std/core/error.c"
   let garbageTGC = "std/core/garbage/tgc.c"
   let garbage = "std/core/garbage.c"
+  let http = "std/core/http.c"
 
   map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv,
-                          rttiRegex, rttiType, rttiError, garbageTGC, garbage]
+                          rttiRegex, rttiType, rttiError, garbageTGC, garbage, http]
 
 includeHeaders :: [String]
 includeHeaders = do
@@ -221,8 +222,9 @@ includeHeaders = do
   let garbageTGC = "std/core/garbage/tgc.h"
   let garbage = "std/core/garbage.h"
   let nanBox = "std/core/value/nanbox.h"
+  let http = "std/core/http.h"
 
-  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, nanBox, rttiType, garbageTGC, garbage]
+  map (getGoosePath </>) [rttiHeader, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, rttiRegex, nanBox, rttiType, garbageTGC, garbage, http]
 
 generateHeaders :: [String] -> String
 generateHeaders = unlines . map (\x -> "#include \"" ++ x ++ "\"")
