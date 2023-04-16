@@ -33,33 +33,33 @@ instance Generation IRToplevel where
     case name of
       "main" -> return $ "int main(int argc, char **argv) { " ++ startGarbage body' ++ "}"
       "$$init$$" -> do
-        decls <- mapM (\x -> case x of
-          IRUpdate name e -> do
+        decls <- mapM (\case
+          IRUpdate name' e -> do
             e' <- generate e
-            name' <- generate name
-            return $ name' ++ " = " ++ e' ++ ";") body
+            name'' <- generate name'
+            return $ name'' ++ " = " ++ e' ++ ";"
+          _ -> error "Should not encounter other statements than updates.") body
         return $  "void $$init$$() {" ++ concat decls ++ "}"
-      _ ->  return $ rttiName ++ " " ++ (varify name) ++ "(" ++ (if null args then "" else rttiName ++ " args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ " " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
+      _ ->  return $ rttiName ++ " " ++ varify name ++ "(" ++ (if null args then "" else rttiName ++ " args") ++ ") { " ++ unlines (zipWith (\arg i -> rttiName ++ " " ++ varify arg ++ " = " ++ "index_(args, " ++ show (i :: Integer) ++ ");") args [0..]) ++ body'  ++ "}"
   generate (IRDeclaration name e) = do
     e' <- generate e
-    return $ rttiName ++ " " ++ (varify name) ++ " = " ++ e' ++ ";"
+    return $ rttiName ++ " " ++ varify name ++ " = " ++ e' ++ ";"
   generate (IRExtern name _) = return $ "extern " ++ rttiName ++ "* " ++ name ++ ";"
   generate (IRStruct name fields) = do
     fields' <- mapM generate fields
-    return $ "struct " ++ (varify name) ++ " { " ++ unwords fields' ++ " };"
+    return $ "struct " ++ varify name ++ " { " ++ unwords fields' ++ " };"
   generate (IRDeclare name args ret) = case args of
-    [] -> return $ ret ++ " " ++ name ++ ";"
-    _ -> return $ ret ++ " " ++ name ++ "(" ++ intercalate ", " args ++ ");"
-  generate _ = return ""
+    [] -> return $ ret ++ " " ++ varify name ++ ";"
+    _ -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args ++ ");"
 
 instance Generation IRStructField where
-  generate (IRStructField name ty) = return $ ty ++ " " ++ (varify name) ++ ";"
+  generate (IRStructField name ty) = return $ ty ++ " " ++ varify name ++ ";"
   generate (IRStructUnion name fields) = do
     fields' <- mapM generate fields
-    return $ "union " ++ (varify name) ++ " { " ++ unwords fields' ++ " };"
+    return $ "union " ++ varify name ++ " { " ++ unwords fields' ++ " };"
   generate (IRStructStruct name fields) = do
     fields' <- mapM generate fields
-    return $ "struct " ++ (varify name) ++ " { " ++ unwords fields' ++ " };"
+    return $ "struct " ++ varify name ++ " { " ++ unwords fields' ++ " };"
 
 fresh :: MonadGeneration m => m String
 fresh = do
@@ -89,7 +89,7 @@ instance Generation IRStatement where
     acc <- (("$$__acc__" ++ var)++) <$> fresh
     e' <- generate e
     s' <- generate s
-    return $ "Array " ++ acc ++ " = decode_pointer(" ++ e' ++ ")->as_array;" ++ "for (int $$i = 0; $$i < " ++ acc ++ ".length; $$i++) { " ++ rttiName ++ " " ++ (varify name) ++ " = " ++ acc ++ ".data[$$i]; " ++  s' ++ "}"
+    return $ "Array " ++ acc ++ " = decode_pointer(" ++ e' ++ ")->as_array;" ++ "for (int $$i = 0; $$i < " ++ acc ++ ".length; $$i++) { " ++ rttiName ++ " " ++ varify name ++ " = " ++ acc ++ ".data[$$i]; " ++  s' ++ "}"
   generate (IRExpression e) = (++";") <$> generate e
   generate (IRBlock s) = do
     s' <- generate s
@@ -98,10 +98,10 @@ instance Generation IRStatement where
   generate IRContinue = return "continue;"
   generate (IRDeclarationStatement name e@(IRDictAccess _ "$$fun")) = do
     e' <- generate e
-    return $ rttiName ++ " (*" ++ (varify name) ++ ")(" ++ rttiName ++ ") = " ++ e' ++ ";"
+    return $ rttiName ++ " (*" ++ varify name ++ ")(" ++ rttiName ++ ") = " ++ e' ++ ";"
   generate (IRDeclarationStatement name e) = do
     e' <- generate e
-    return $ rttiName ++ " " ++ (varify name) ++ " = " ++ e' ++ ";"
+    return $ rttiName ++ " " ++ varify name ++ " = " ++ e' ++ ";"
   generate (IRUpdate e1 e2) = do
     e1' <- generate e1
     e2' <- generate e2
@@ -141,11 +141,11 @@ instance Generation IRExpression where
   generate (IRLiteral l) = case l of
     Int i -> return $ "integer(" ++ show i ++ ")"
     Float f -> return $ "floating(" ++ show f ++ ")"
-    Bool True -> return $ "boolean(1)"
-    Bool False -> return $ "boolean(0)"
+    Bool True -> return "boolean(1)"
+    Bool False -> return "boolean(0)"
     Char c -> return $ "character(" ++ show c ++ ")"
     String s -> return $ generateString s
-    Unit -> return $ "unit()"
+    Unit -> return "unit()"
   generate (IRList es) = generateList es
   generate (IRListAccess e1 e2) = do
     e1' <- generate e1
@@ -186,10 +186,10 @@ instance Generation a => Generation [a] where
   generate = (unlines <$>) . mapM generate
 
 getGoosePath :: String
-getGoosePath = unsafeDupablePerformIO $ do
+getGoosePath = unsafeDupablePerformIO $
   lookupEnv "GOOSE" >>= \case
-    Just path -> return path
-    Nothing -> error "GOOSE environment variable not set."
+  Just path -> return path
+  Nothing -> error "GOOSE environment variable not set."
 
 includeLibrary :: [String]
 includeLibrary = do
@@ -204,8 +204,8 @@ includeLibrary = do
   let rttiError = "std/core/error.c"
   let garbageTGC = "std/core/garbage/tgc.c"
   let garbage = "std/core/garbage.c"
-  
-  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv, 
+
+  map (getGoosePath </>) [rttiMaker, rttiNum, rttiEq, rttiList, rttiIO, rttiConv,
                           rttiRegex, rttiType, rttiError, garbageTGC, garbage]
 
 includeHeaders :: [String]
