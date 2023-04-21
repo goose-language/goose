@@ -3,7 +3,7 @@
 
 #include "value.h"
 
-nanbox_t Regex_get(nanbox_t args);
-nanbox_t Regex_test(nanbox_t args);
+VALUE Regex_get(VALUE args);
+VALUE Regex_test(VALUE args);
 
 #endif

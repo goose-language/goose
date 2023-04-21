@@ -8,8 +8,8 @@
 #include <string.h>
 #include "conversion.h"
 
-nanbox_t Type_of(nanbox_t args) {
-  nanbox_t value = index_(args, 0);
+VALUE Type_of(VALUE args) {
+  VALUE value = index_(args, 1);
   switch (get_type(value)) {
     case TYPE_LAMBDA: return string("lambda");
     case TYPE_INTEGER: return string("int");
@@ -23,7 +23,7 @@ nanbox_t Type_of(nanbox_t args) {
   }
 }
 
-char* toString_(nanbox_t value, int depth) {
+char* toString_(VALUE value, int depth) {
   switch (get_type(value)) {
     case TYPE_LAMBDA: {
       char* result = malloc(sizeof(char) * 100);
@@ -123,11 +123,11 @@ char* toString_(nanbox_t value, int depth) {
   }
 }
 
-char* toString(nanbox_t value) {
+char* toString(VALUE value) {
   return toString_(value, 0);
 }
 
-nanbox_t String_from(nanbox_t args) {
-  nanbox_t value = index_(args, 0);
+VALUE String_from(VALUE args) {
+  VALUE value = index_(args, 1);
   return string(toString(value));
 }

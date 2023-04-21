@@ -3,6 +3,6 @@
 #include "value.h"
 #include "value/nanbox.h"
 
-nanbox_t HTTP_fetch(nanbox_t args);
+VALUE HTTP_fetch(VALUE args);
 
 #endif

@@ -8,23 +8,23 @@
 #include "garbage.h"
 #include "garbage/tgc.h"
 
-nanbox_t add(nanbox_t a, nanbox_t b) {
+VALUE add(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
   if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
-    return integer(a.as_int64 + b.as_int64);
+    return integer(a + b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
-    return floating(a.as_double + b.as_double);
+    return floating(a + b);
   } else if (type_a == TYPE_INTEGER && type_b == TYPE_FLOAT) {
-    return floating(a.as_int64 + b.as_double);
+    return floating(a + b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
-    return floating(a.as_double + b.as_int64);
+    return floating(a + b);
   } else if (type_a == TYPE_ARRAY && type_b == TYPE_ARRAY) {
     Array a_array = decode_pointer(a)->as_array;
     Array b_array = decode_pointer(b)->as_array;
 
-    nanbox_t* new_data = malloc(sizeof(nanbox_t) * (a_array.length + b_array.length));
+    VALUE* new_data = malloc(sizeof(VALUE) * (a_array.length + b_array.length));
     for (int i = 0; i < a_array.length; i++) {
       new_data[i] = a_array.data[i];
     }
@@ -38,61 +38,63 @@ nanbox_t add(nanbox_t a, nanbox_t b) {
     new_heap_value->as_array = new_array;
     return create_pointer(new_heap_value);
   } else {
-    printf("Cannot add %s and %s together", Type_of(list(1, (nanbox_t[1]) { a })), Type_of(list(1, (nanbox_t[1]) { b })));
-    exit(0);
+    throwError("Cannot add %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
   }
+  return unit();
 }
 
-nanbox_t subtract(nanbox_t a, nanbox_t b) {
+VALUE subtract(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
   if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
-    return integer(a.as_int64 - b.as_int64);
+    return integer(a - b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
-    return floating(a.as_double - b.as_double);
+    return floating(a - b);
   } else if (type_a == TYPE_INTEGER && type_b == TYPE_FLOAT) {
-    return floating(a.as_int64 - b.as_double);
+    return floating(a - b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
-    return floating(a.as_double - b.as_int64);
+    return floating(a - b);
   } else {
-    printf("Cannot subtract %s and %s together", Type_of(list(1, (nanbox_t[1]) { a })), Type_of(list(1, (nanbox_t[1]) { b })));
-    exit(0);
+    throwError("Cannot subtract %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
   }
+  return unit();
 }
 
-nanbox_t multiply(nanbox_t a, nanbox_t b) {
+VALUE multiply(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
   if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
-    return integer(a.as_int64 * b.as_int64);
+    return integer(a * b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
-    return floating(a.as_double * b.as_double);
+    return floating(a * b);
   } else if (type_a == TYPE_INTEGER && type_b == TYPE_FLOAT) {
-    return floating(a.as_int64 * b.as_double);
+    return floating(a * b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
-    return floating(a.as_double * b.as_int64);
+    return floating(a * b);
   } else {
-    printf("Cannot multiply %s and %s together", Type_of(list(1, (nanbox_t[1]) { a })), Type_of(list(1, (nanbox_t[1]) { b })));
+    throwError("Cannot multiply %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
     exit(0);
   }
+  return unit();
 }
 
-nanbox_t divide(nanbox_t a, nanbox_t b) {
+VALUE divide(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
   if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
-    return integer(a.as_int64 / b.as_int64);
+    return integer(a / b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
-    return floating(a.as_double / b.as_double);
+    return floating(a / b);
   } else if (type_a == TYPE_INTEGER && type_b == TYPE_FLOAT) {
-    return floating(a.as_int64 / b.as_double);
+    return floating(a / b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
-    return floating(a.as_double / b.as_int64);
+    return floating(a / b);
   } else {
-    printf("Cannot divide %s and %s together", Type_of(list(1, (nanbox_t[1]) { a })), Type_of(list(1, (nanbox_t[1]) { b })));
+    throwError("Cannot divide %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
     exit(0);
   }
+  return unit();
 }

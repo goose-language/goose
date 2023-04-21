@@ -10,7 +10,7 @@
 #include "garbage.h"
 #include "io.h"
 
-nanbox_t index_(nanbox_t v, int i) {
+VALUE index_(VALUE v, int i) {
   if (get_type(v) == TYPE_ARRAY) {
     Array list_ = decode_pointer(v)->as_array;
     if (i < list_.length && i >= 0) {
@@ -18,26 +18,19 @@ nanbox_t index_(nanbox_t v, int i) {
     } else {
       throwError("index out of bounds (%d) in %s", i, toString(v));
     }
-  } else if (get_type(v) == TYPE_MUTABLE) {
-    Array list_ = decode_pointer(get_mutable(v))->as_array;
-    if (i < list_.length && i >= 0) {
-      return create_mutable(list_.data[i]);
-    } else {
-      throwError("index out of bounds (%d) in %s", i, toString(v));
-    }
   } else {
     throwError("expected list, got %s", decode_string(Type_of(list(1, v))));
   }
+  return unit();
 }
 
-nanbox_t Array_push(nanbox_t args) {
-  nanbox_t lst = index_(args, 0);
-  nanbox_t value = index_(args, 1);
-  nanbox_t result = lst;
-  if (get_type(lst) == TYPE_MUTABLE) {
-    nanbox_t* mutable = unbox_mutable(lst);
-    Array list_ = decode_pointer(*mutable)->as_array;
-    list_.data = realloc(list_.data, sizeof(nanbox_t) * (list_.length + 1));
+VALUE Array_push(VALUE args) {
+  VALUE lst = index_(args, 1);
+  VALUE value = index_(args, 2);
+  VALUE result = lst;
+  if (get_type(lst) == TYPE_ARRAY) {
+    Array list_ = decode_pointer(lst)->as_array;
+    list_.data = realloc(list_.data, sizeof(VALUE) * (list_.length + 1));
 
     list_.data[list_.length] = value;
     list_.length = list_.length + 1;
@@ -46,26 +39,24 @@ nanbox_t Array_push(nanbox_t args) {
     ptr->type = TYPE_ARRAY;
     ptr->as_array = list_;
 
-    *mutable = create_pointer(ptr);
     return unit();
   } else {
-    throwError("expected mutable list, got %s", decode_string(Type_of(list(1, lst))));
+    throwError("expected list, got %s", decode_string(Type_of(list(1, lst))));
   }
   return result;
 }
 
-nanbox_t Array_length(nanbox_t args) {
-  nanbox_t array = index_(args, 0);
+VALUE Array_length(VALUE args) {
+  VALUE array = index_(args, 1);
   if (get_type(array) == TYPE_ARRAY) {
     return integer(decode_pointer(array)->as_array.length);
-  } else if (get_type(array) == TYPE_MUTABLE) {
-    return integer(decode_pointer(get_mutable(array))->as_array.length);
   } else {
     throwError("expected list, got %s", decode_string(Type_of(list(1, array))));
+    return unit();
   }
 }
 
-nanbox_t property_(nanbox_t dict, char* key) {
+VALUE property_(VALUE dict, char* key) {
   if (get_type(dict) == TYPE_DICT) {
     Dict heap = decode_pointer(dict)->as_dict;
     for (int i = 0; i < heap.length; i++) {
@@ -74,14 +65,15 @@ nanbox_t property_(nanbox_t dict, char* key) {
       }
     }
     throwError("structure has no property named %s in %s", key, toString(dict));
+    return unit();
   } else {
     return unit();
   }
 }
 
-nanbox_t Array_has(nanbox_t args) {
-  nanbox_t dict = index_(args, 0);
-  nanbox_t key = index_(args, 1);
+VALUE Array_has(VALUE args) {
+  VALUE dict = index_(args, 1);
+  VALUE key = index_(args, 2);
 
   const char* key_str = decode_string(key);
 
@@ -98,10 +90,10 @@ nanbox_t Array_has(nanbox_t args) {
   }
 }
 
-nanbox_t IO_clone(nanbox_t args)
+VALUE IO_clone(VALUE args)
 {
-  nanbox_t item = index_(args, 0);
-  nanbox_t result;
+  VALUE item = index_(args, 1);
+  VALUE result;
 
   switch (get_type(item)) {
     case TYPE_BOOL:
@@ -114,7 +106,7 @@ nanbox_t IO_clone(nanbox_t args)
       HeapValue* heap = malloc(sizeof(HeapValue));
       heap->type = TYPE_ARRAY;
       heap->as_array.length = decode_pointer(item)->as_array.length;
-      heap->as_array.data = malloc(sizeof(nanbox_t) * heap->as_array.length);
+      heap->as_array.data = malloc(sizeof(VALUE) * heap->as_array.length);
       for (int i = 0; i < heap->as_array.length; i++) {
         heap->as_array.data[i] = IO_clone(list(1, decode_pointer(item)->as_array.data[i]));
       }
@@ -125,7 +117,7 @@ nanbox_t IO_clone(nanbox_t args)
       heap->type = TYPE_DICT;
       HeapValue* item_ = decode_pointer(item);
       heap->as_dict.length = item_->as_dict.length;
-      heap->as_dict.values = malloc(sizeof(nanbox_t) * heap->as_dict.length);
+      heap->as_dict.values = malloc(sizeof(VALUE) * heap->as_dict.length);
       heap->as_dict.keys = malloc(sizeof(char*) * heap->as_dict.length);
       for (int i = 0; i < heap->as_dict.length; i++) {
         heap->as_dict.values[i] = IO_clone(list(1, item_->as_dict.values[i]));
@@ -144,17 +136,17 @@ nanbox_t IO_clone(nanbox_t args)
       return create_pointer(heap);
     }
     default: 
-      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(1, (nanbox_t[1]) { item }))));
+      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(1, (VALUE[1]) { item }))));
   }
   return result;
 }
 
-nanbox_t Array_create(nanbox_t args) {
-  nanbox_t size = index_(args, 0);
-  nanbox_t value = index_(args, 1);
+VALUE Array_create(VALUE args) {
+  VALUE size = index_(args, 1);
+  VALUE value = index_(args, 2);
 
   int size_ = decode_integer(size);
-  nanbox_t* data = malloc(sizeof(nanbox_t) * size_);
+  VALUE* data = malloc(sizeof(VALUE) * size_);
   for (int i = 0; i < size_; i++) {
     data[i] = IO_clone(list(1, value));
   }
