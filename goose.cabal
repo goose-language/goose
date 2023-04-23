@@ -97,11 +97,11 @@ library
 
         Language.Goose.Transformation.Closure.Free
         Language.Goose.Transformation.Closure.Conversion
-        Language.Goose.Transformation.Closure.Hoisting
 
         Language.Goose.Transformation.EtaExpansion
         Language.Goose.Transformation.DeclarationRemover
-
+        Language.Goose.Transformation.AlphaConversion
+        Language.Goose.Transformation.BlockRemover
 
         Language.Goose.CLang.Compiler
             Language.Goose.CLang.Definition.IR
@@ -109,6 +109,10 @@ library
         Language.Goose.CLang.Build
         Language.Goose.CLang.Garbage
         Language.Goose.CLang.Pattern
+
+        Language.Goose.LLVM.BuildLibrary
+        Language.Goose.LLVM.Compiler
+            
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -127,6 +131,10 @@ library
       , directory
       , filepath
       , MissingH
+      , llvm-hs
+      , llvm-hs-pure
+      , bytestring
+      , int-cast
 
     -- Directories containing source files.
     hs-source-dirs:   src
