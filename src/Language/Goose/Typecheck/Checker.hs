@@ -177,13 +177,13 @@ inferExpression (C.Located pos (C.Match expr cases)) = do
     unify (t :~: t', pos)
     (t'', e'') <- withVariables (M.toList vars) $ inferExpression expr'
     return ((t', t''), (pat', e''))))
-  
+
   (ret, xs) <- case tys of
     [] -> E.throwError ("Empty match", Nothing, pos)
     ((_, ret):xs) -> return (ret, xs)
-  
+
   CM.forM_ xs (\(_, t') -> unify (ret :~: t', pos))
-  
+
   return (ret, A.Match e' cases')
 inferExpression (C.Located pos _) = E.throwError ("Invalid expression", Nothing, pos)
 
@@ -195,7 +195,6 @@ inferUpdate (C.Located pos (C.VariableUpdate (D.Simple name))) = do
     Just scheme -> do
       tv <- fresh
       t <- instantiate scheme
-      unify (t :~: Mutable tv, pos)
       return (tv, A.VariableUpdate name t)
 inferUpdate (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
@@ -261,7 +260,7 @@ inferToplevel (C.Located pos (C.Function (C.Annoted name ret) generics' args exp
   gens <- mapM (\case
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) $ M.elems generics''
- 
+
   let funTy = map snd argsTypes :-> ret'
   let args' = (name, Forall gens funTy) : map (\(n, t) -> (n, Forall gens t)) argsTypes
 
@@ -277,34 +276,20 @@ inferToplevel (C.Located pos (C.Function (C.Annoted name ret) generics' args exp
   ST.modify $ \s' -> s' { returnType = Void }
   return (Void, apply s $ [A.Function name (map (uncurry C.Annoted) argsTypes) ret' e'])
 inferToplevel (C.Located _ (C.Public tl)) = inferToplevel tl
-inferToplevel (C.Located pos (C.Extern name generics' decl ret)) = do
-  genericsTy <- mapM (const fresh) generics'
-  let env = M.fromList $ zip generics' genericsTy
-  
-  decl' <- mapM (flip toWithEnv env) decl
-  ret' <- toWithEnv ret env
-
-  generics'' <- mapM (\case 
-      TVar i -> return i
-      _ -> E.throwError ("Invalid generic", Nothing, pos)) genericsTy
-
-  let scheme = Forall generics'' $ decl' :-> ret'
-  ST.modify $ \s -> s { variables = M.insert name scheme (variables s) }
-  return (Void, [A.Extern (C.Annoted name (decl' :-> ret'))])
 inferToplevel (C.Located pos (C.Declare name gens args ret)) = do
   generics' <- mapM (const fresh) gens
   let env = M.fromList $ zip gens generics'
-  args' <- mapM (mapM (flip toWithEnv env)) args
+  args' <- mapM (mapM (`toWithEnv` env)) args
   ret' <- toWithEnv ret env
 
-  gens' <- mapM (\case 
+  gens' <- mapM (\case
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) generics'
 
   let ty = case args' of
         Nothing -> ret'
         Just args'' -> args'' :-> ret'
-  
+
   let scheme = Forall gens' ty
   ST.modify $ \s -> s { variables = M.insert name scheme (variables s) }
   return (Void, [A.Declare generics' (C.Annoted name ty)])
@@ -317,7 +302,7 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
     args' <- mapM (flip toWithEnv env) args
     return (name', args' :-> header)) constructors
 
-  gens <- mapM (\case 
+  gens <- mapM (\case
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) generics''
 
@@ -342,7 +327,7 @@ inferToplevel (C.Located pos (C.Type name generics' decl)) = do
   let env = M.fromList $ zip generics' gens
 
   decl' <- toWithEnv decl env
-  gens' <- mapM (\case 
+  gens' <- mapM (\case
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) gens
 
@@ -378,4 +363,4 @@ functions = M.fromList [
     ("-", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1),
     ("()", Forall [] $ Void),
     ("+", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1)
-  ] 
+  ]

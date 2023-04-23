@@ -146,7 +146,6 @@ instance Types Toplevel where
 
   apply s (Function name args ret body) = Function name (apply s args) (apply s ret) (apply s body)
   apply s (Declaration name ty expr) = Declaration name (apply s ty) (apply s expr)
-  apply s (Extern (C.Annoted name ty)) = Extern $ C.Annoted name (apply s ty)
   apply s (Declare name ty) = Declare (apply s name) (apply s ty)
 
 instance Types a => Types (C.Annoted a) where

@@ -23,10 +23,6 @@ data Toplevel
       declarationType :: Type, 
       declarationBody :: Expression }
 
-  -- | A toplevel extern declaration
-  -- | Of the form: extern declaration
-  | Extern (Annoted Type)
-
   | Declare [Type] (Annoted Type)
   deriving Eq
 
@@ -127,7 +123,6 @@ data Pattern
 instance Show Toplevel where
   show (Function name args returnType body) = "fun " ++ name ++ show args ++ show returnType ++ " = " ++ show body
   show (Declaration name type_ body) = "let " ++ name ++ ": " ++ show type_ ++ " = " ++ show body
-  show (Extern toplevel) = "extern " ++ show toplevel
   show (Declare toplevel gens) = "def " ++ show gens ++ show toplevel
 
 instance Show Pattern where
