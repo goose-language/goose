@@ -15,8 +15,8 @@ buildLibrary libs = do
     Just command -> IO.callProcess command ("-c" : "-w" : libraries ++ libs) >> return (Just command)
     Nothing -> putStrLn "No CLang compiler LLVM found!" >> return Nothing
 
-buildExecutable :: [ANFDefinition] -> [String] -> IO ()
-buildExecutable ast libs = do
+buildExecutable :: [ANFDefinition] -> [String] -> [String] -> String -> IO ()
+buildExecutable ast libs flags output = do
   clang <- buildLibrary libs
   x <- LLVM.runCompiler (compile ast)
   writeFile "main.ll" x
@@ -24,7 +24,7 @@ buildExecutable ast libs = do
   case clang of
     Just command -> do
       IO.callProcess "llc" ["main.ll", "-filetype=obj", "-o", "main.o"]
-      IO.callCommand $ unwords [command, "*.o", "-o", "main", "-lcurl", "-w"]
+      IO.callCommand . unwords $ [command, "*.o", "-o", output, "-w"] ++ map ("-l"++) flags
       IO.removeFile "main.o"
       mapM_ (IO.removeFile . (-<.> "o") . takeFileName) (CL.includeLibrary ++ libs)
     Nothing -> return ()
