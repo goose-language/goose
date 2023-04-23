@@ -41,6 +41,25 @@ public module Array
     return arr
   end
 
+  def reduce[a, b](arr: [a], init: b, f: fun(b, a): b): b do
+    if Array::empty(arr) then return init
+    def acc = init
+    for item in arr do
+      acc = f(acc, item)
+    end
+    return acc
+  end
+
+  def join[a](arr: [a], sep: a): [a] do
+    if Array::empty(arr) then return []
+    def res: [a] = []
+    for item in arr do
+      res = res + [item]
+      if item != arr[Array::length(arr) - 1] then res = res + [sep]
+    end
+    return res
+  end
+
   def startsWith[a](arr: [a], prefix: [a]): bool do
     if Array::length(arr) < Array::length(prefix) then return false
     def i = 0
