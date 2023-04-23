@@ -9,14 +9,12 @@ import Language.Goose.Transformation.ANF.ANF
 import Language.Goose.Transformation.Closure.Conversion
 import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.Transformation.DeclarationRemover
-import Language.Goose.CLang.Build
-import Language.Goose.CLang.Compiler
-import Language.Goose.CLang.Definition.Generation
+import Language.Goose.LLVM.BuildLibrary (buildExecutable)
 import System.Environment
 import Data.List
 
 import qualified Log.Error as L
-import Language.Goose.LLVM.BuildLibrary (buildExecutable)
+
 
 chunkBy2 :: [a] -> [(a, a)]
 chunkBy2 [] = []
@@ -48,8 +46,5 @@ main = do
                       ast <- runANF ast
                       ast <- return $ runClosureConversion ast
                       ast <- return $ addInitFunction ast
-                      -- mapM_ print ast
-                      -- let (libraries', headers) = unzip $ chunkBy2 libraries
-                      -- build ast "main" (libraries' ++ includeLibrary) (includeHeaders ++ headers)
-                      buildExecutable ast
+                      buildExecutable ast libraries
     _ -> putStrLn "Usage: goose <file> [libraries]"
