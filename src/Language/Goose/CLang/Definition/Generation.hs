@@ -15,7 +15,7 @@ import Control.Monad.State
 type MonadGeneration m = MonadState Int m
 
 rttiName :: String
-rttiName = "nanbox_t"
+rttiName = "VALUE"
 
 class Generation a where
   generate :: MonadGeneration m => a -> m String
@@ -51,6 +51,7 @@ instance Generation IRToplevel where
   generate (IRDeclare name args ret) = case args of
     [] -> return $ ret ++ " " ++ varify name ++ ";"
     _ -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args ++ ");"
+  generate (IRGlobalString name str) = return $ "const char*" ++ varify name ++ " = " ++ show str ++ ";"
 
 instance Generation IRStructField where
   generate (IRStructField name ty) = return $ ty ++ " " ++ varify name ++ ";"

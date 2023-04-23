@@ -3,14 +3,14 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# OPTIONS_GHC -Wno-type-defaults #-}
 module Language.Goose.CLang.Pattern where
-import Language.Goose.CST.Literal ( Literal(String, Int) )
+import Language.Goose.CST.Literal ( Literal(String, Int, Bool) )
 import Language.Goose.CLang.Definition.IR
 import Prelude hiding ( and )
 import Data.Maybe
 import Language.Goose.Typecheck.Definition.AST
 
 and :: IRExpression -> IRExpression -> IRExpression
-and = IRBinary "&&"
+and x y = IRTernary x y (IRLiteral $ Bool False)
 
 findPattern :: Pattern -> (IRExpression -> [(Maybe IRStatement, Maybe IRExpression)])
 findPattern (PLiteral l)    =
@@ -36,7 +36,7 @@ findPattern (PStructure fields) = do
 
 compileCase :: Pattern -> IRExpression -> [IRStatement] -> IRStatement
 compileCase (PVariable n _) = do
-  \x b -> 
+  \x b ->
     IRBlock $ IRDeclarationStatement n x : b
 compileCase (PConstructor n args) = do
   let args' x = concat $ zipWith (\arg v -> do
@@ -54,7 +54,7 @@ compileCase (PConstructor n args) = do
 compileCase PWildcard = do
   \_ b -> IRBlock b
 compileCase (PLiteral l) = do
-  \x b -> 
+  \x b ->
     let cond = IRApplication (IRVariable "eq") [x, IRLiteral l]
       in IRIf cond b
 compileCase (PList pats) = do
@@ -69,7 +69,7 @@ compileCase (PList pats) = do
       in IRIf conds (lets ++ b)
 compileCase (PStructure fields) = do
   \x b -> do
-    let args_ = concat $ map (\(n, y) -> do
+    let args_ = concatMap (\(n, y) -> do
           let f = findPattern y
           f (IRDictAccess x n) ++ concatMap (\(x', _) -> [(Nothing, Just $ IRIn x x')]) fields ) fields
     let lets = map (fromJust . fst) $ filter (isJust . fst) args_
@@ -80,4 +80,4 @@ compileCase (PStructure fields) = do
 createAnd :: [IRExpression] -> IRExpression
 createAnd [] = error "test"
 createAnd [x] = x
-createAnd (x:xs) = x `and` createAnd xs
+createAnd (x:xs) = IRTernary x (createAnd xs) (IRLiteral (Bool False))
