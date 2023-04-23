@@ -15,5 +15,6 @@ VALUE IO_input(VALUE prompt);
 VALUE IO_writeFile(VALUE args);
 
 HeapValue* getVariantArguments(VALUE args);
+int hasProperty(VALUE value, char* key);
 
 #endif

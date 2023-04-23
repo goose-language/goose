@@ -97,7 +97,17 @@ char* toString_(VALUE value, int depth) {
     case TYPE_DICT: {
       Dict dict = decode_pointer(value)->as_dict;
       char* result = malloc(sizeof(char) * 2);
-      if (dict.length == 0) {
+      if (hasProperty(value, "$$enum")) {
+        strcat(result, decode_string(property_(value, "type")));
+        strcat(result, "(");
+        Array list_ = getVariantArguments(value)->as_array;
+        for (int i = 0; i < list_.length; i++) {
+          strcat(result, toString_(list_.data[i], depth + 1));
+          if (i != list_.length - 1) strcat(result, ",");
+        }
+        strcat(result, ")");
+        return result;
+      } else if (dict.length == 0) {
         result[0] = '{';
         result[1] = '}';
         return result;
