@@ -8,8 +8,8 @@
 #include <string.h>
 #include "conversion.h"
 
-nanbox_t Type_of(nanbox_t args) {
-  nanbox_t value = index_(args, 0);
+VALUE Type_of(VALUE args) {
+  VALUE value = index_(args, 1);
   switch (get_type(value)) {
     case TYPE_LAMBDA: return string("lambda");
     case TYPE_INTEGER: return string("int");
@@ -23,7 +23,7 @@ nanbox_t Type_of(nanbox_t args) {
   }
 }
 
-char* toString_(nanbox_t value, int depth) {
+char* toString_(VALUE value, int depth) {
   switch (get_type(value)) {
     case TYPE_LAMBDA: {
       char* result = malloc(sizeof(char) * 100);
@@ -97,7 +97,17 @@ char* toString_(nanbox_t value, int depth) {
     case TYPE_DICT: {
       Dict dict = decode_pointer(value)->as_dict;
       char* result = malloc(sizeof(char) * 2);
-      if (dict.length == 0) {
+      if (hasProperty(value, "$$enum")) {
+        strcat(result, decode_string(property_(value, "type")));
+        strcat(result, "(");
+        Array list_ = getVariantArguments(value)->as_array;
+        for (int i = 0; i < list_.length; i++) {
+          strcat(result, toString_(list_.data[i], depth + 1));
+          if (i != list_.length - 1) strcat(result, ",");
+        }
+        strcat(result, ")");
+        return result;
+      } else if (dict.length == 0) {
         result[0] = '{';
         result[1] = '}';
         return result;
@@ -123,11 +133,11 @@ char* toString_(nanbox_t value, int depth) {
   }
 }
 
-char* toString(nanbox_t value) {
+char* toString(VALUE value) {
   return toString_(value, 0);
 }
 
-nanbox_t String_from(nanbox_t args) {
-  nanbox_t value = index_(args, 0);
+VALUE String_from(VALUE args) {
+  VALUE value = index_(args, 1);
   return string(toString(value));
 }

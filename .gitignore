@@ -5,3 +5,5 @@ main.c
 *.html
 .vscode
 dist-newstyle
+*.o
+*.ll

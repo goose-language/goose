@@ -28,7 +28,6 @@ anfTL (T.Function name args _ expr) = do
 anfTL (T.Declaration name _ expr) = do
   (lets, expr') <- anfExpr expr
   return $ (lets, A.DDeclaration name expr')
-anfTL (T.Extern name) = return ([], A.DExtern name)
 anfTL (T.Declare _ name) = return ([], A.DDeclare name)
 
 anfStmt :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], [A.ANFStatement])

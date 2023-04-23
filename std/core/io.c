@@ -13,22 +13,22 @@
 #include "type.h"
 #include "value.h"
 
-nanbox_t IO_fileExists (nanbox_t filename) {
-  nanbox_t v = index_(filename, 0);
+VALUE IO_fileExists (VALUE filename) {
+  VALUE v = index_(filename, 1);
   
   char *filename_ = decode_string(v);
   struct stat buffer;   
   return boolean(stat(filename_, &buffer) == 0);
 }
 
-nanbox_t IO_readDirectory(nanbox_t args) {
-  nanbox_t v = index_(args, 0);
+VALUE IO_readDirectory(VALUE args) {
+  VALUE v = index_(args, 1);
 
   char *filename_ = decode_string(v);
   DIR *d;
   struct dirent *dir;
   d = opendir(filename_);
-  nanbox_t result = emptyList();
+  VALUE result = emptyList();
   if (d) {
     while ((dir = readdir(d)) != NULL) {
       result = Array_push(list(2, result, string(dir->d_name)));
@@ -38,9 +38,9 @@ nanbox_t IO_readDirectory(nanbox_t args) {
   return result;
 }
 
-HeapValue* getVariantArguments(nanbox_t dict) {
+HeapValue* getVariantArguments(VALUE dict) {
   Dict heap = decode_pointer(dict)->as_dict;
-  nanbox_t* data = malloc(sizeof(nanbox_t) * heap.length);
+  VALUE* data = malloc(sizeof(VALUE) * heap.length);
   int j = 0; 
   for (int i = 0; i < heap.length; i++) {
     if (strcmp(heap.keys[i], "$$enum") == 0) continue;
@@ -57,7 +57,7 @@ HeapValue* getVariantArguments(nanbox_t dict) {
   return result;
 }
 
-int hasProperty(nanbox_t dict, char* key) {
+int hasProperty(VALUE dict, char* key) {
   Dict heap = decode_pointer(dict)->as_dict;
   for (int i = 0; i < heap.length; i++) {
     if (strcmp(heap.keys[i], key) == 0) return 1;
@@ -65,8 +65,8 @@ int hasProperty(nanbox_t dict, char* key) {
   return 0;
 }
 
-nanbox_t IO_print(nanbox_t args) {
-  nanbox_t v = index_(args, 0);
+VALUE IO_print(VALUE args) {
+  VALUE v = index_(args, 1);
 
   switch (get_type(v)) {
     case TYPE_INTEGER: 
@@ -93,7 +93,7 @@ nanbox_t IO_print(nanbox_t args) {
       } else {
         printf("[");
         for (int i = 0; i < list_.length; i++) {
-          IO_print(list(1, list_.data[i]));
+          IO_print(list(2, unit(), list_.data[i]));
           if (i != list_.length - 1) printf(", ");
         }
         printf("]");
@@ -108,7 +108,7 @@ nanbox_t IO_print(nanbox_t args) {
         printf("(");
         Array list_ = getVariantArguments(v)->as_array;
         for (int i = 0; i < list_.length; i++) {
-          IO_print(list(1, list_.data[i]));
+          IO_print(list(2, unit(), list_.data[i]));
           if (i != list_.length - 1) printf(", ");
         }
         printf(")");
@@ -116,7 +116,7 @@ nanbox_t IO_print(nanbox_t args) {
         printf("{");
         for (int i = 0; i < dict.length; i++) {
           printf("%s: ", dict.keys[i]);
-          IO_print(list(1, dict.values[i]));
+          IO_print(list(2, unit(), dict.values[i]));
           if (i != dict.length - 1) printf(", ");
         }
         printf("}");
@@ -124,83 +124,28 @@ nanbox_t IO_print(nanbox_t args) {
       break;
     }
 
-    case TYPE_MUTABLE: {
-      nanbox_t value = get_mutable(v);
-      printf("mutable ");
-      IO_print(list(1, value));
-    }
-
     case TYPE_LAMBDA: {
       printf("lambda<#%p>", decode_pointer(v));
       break;
     }
   }
-}
-
-void update(nanbox_t* v, nanbox_t value) {
-  if (v == NULL) throwError("expected variable, got NULL");
-  switch (get_type(*v)) {
-    case TYPE_INTEGER: {
-      *v = integer(decode_integer(value));
-      break;
-    }
-    case TYPE_FLOAT: {
-      *v = floating(decode_floating(value));
-      break;
-    }
-    case TYPE_CHAR: {
-      *v = character(decode_character(value));
-      break;
-    }
-    case TYPE_BOOL: {
-      *v = value;
-      break;
-    }
-    case TYPE_NULL: {
-      *v = value;
-      break;
-    }
-    case TYPE_ARRAY: {
-      Array list_ = decode_pointer(*v)->as_array;
-      Array list_2 = decode_pointer(value)->as_array;
-      list_.data = realloc(list_.data, sizeof(nanbox_t) * list_2.length);
-      for (int i = 0; i < list_2.length; i++) {
-        printf("%d\n", i);
-        IO_print(list(1, list_2.data[i]));
-        list_.data[i] = list_2.data[i];
-      }
-      break;
-    }
-    case TYPE_DICT: {
-      Dict dict = decode_pointer(*v)->as_dict;
-      Dict dict_2 = decode_pointer(value)->as_dict;
-      dict.values = realloc(dict.values, sizeof(nanbox_t) * dict_2.length);
-      for (int i = 0; i < dict.length; i++) {
-        dict.values[i] = dict_2.values[i];
-      }
-      break;
-    }
-    case TYPE_MUTABLE: {
-      nanbox_t* value_ = decode_pointer(*v)->as_pointer;
-      *value_ = value;
-      break;
-    }
-  }
+  return unit();
 }
 
 
 
-void IO_exit(nanbox_t args) {
-  nanbox_t v = index_(args, 0);
+void IO_exit(VALUE args) {
+  VALUE v = index_(args, 1);
   exit(decode_integer(v));
 }
-nanbox_t IO_readFile(nanbox_t args) {
-  nanbox_t path = index_(args, 0);
+VALUE IO_readFile(VALUE args) {
+  VALUE path = index_(args, 1);
 
   FILE* file = fopen(decode_string(path), "r");
   fseek(file, 0L, SEEK_END);
   size_t len = ftell(file);
   rewind(file);
+
   char* buffer = malloc(sizeof(char) * len);
   int i = 0;
   char c;
@@ -213,9 +158,9 @@ nanbox_t IO_readFile(nanbox_t args) {
   return string(buffer);
 }
 
-nanbox_t IO_writeFile(nanbox_t args) {
-  nanbox_t path = index_(args, 0);
-  nanbox_t content = index_(args, 1);
+VALUE IO_writeFile(VALUE args) {
+  VALUE path = index_(args, 1);
+  VALUE content = index_(args, 2);
 
   FILE* file = fopen(decode_string(path), "w");
   fputs(decode_string(content), file);
@@ -223,8 +168,8 @@ nanbox_t IO_writeFile(nanbox_t args) {
   return unit();
 }
 
-nanbox_t IO_input(nanbox_t args) {
-  nanbox_t prompt = index_(args, 0);
+VALUE IO_input(VALUE args) {
+  VALUE prompt = index_(args, 1);
 
   printf("%s", decode_string(prompt));
   char* buffer = malloc(sizeof(char) * 100);

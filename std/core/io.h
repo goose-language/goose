@@ -4,16 +4,17 @@
 #include "value/nanbox.h"
 #include "value.h"
 
-nanbox_t IO_print(nanbox_t args);
-void update(nanbox_t *variable, nanbox_t value);
-void freeValue(nanbox_t value);
-void IO_exit(nanbox_t args);
-nanbox_t IO_readDirectory(nanbox_t args);
-nanbox_t IO_fileExists(nanbox_t args);
-nanbox_t IO_readFile(nanbox_t path);
-nanbox_t IO_input(nanbox_t prompt);
-nanbox_t IO_writeFile(nanbox_t args);
+VALUE IO_print(VALUE args);
+void update(VALUE *variable, VALUE value);
+void freeValue(VALUE value);
+void IO_exit(VALUE args);
+VALUE IO_readDirectory(VALUE args);
+VALUE IO_fileExists(VALUE args);
+VALUE IO_readFile(VALUE path);
+VALUE IO_input(VALUE prompt);
+VALUE IO_writeFile(VALUE args);
 
-HeapValue* getVariantArguments(nanbox_t args);
+HeapValue* getVariantArguments(VALUE args);
+int hasProperty(VALUE value, char* key);
 
 #endif

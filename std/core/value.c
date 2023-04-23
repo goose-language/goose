@@ -7,40 +7,36 @@
 #include "garbage.h"
 #include "io.h"
 #include <stdarg.h>
-#include "value/nanbox.h"
 
-nanbox_t integer(int32_t value) {
-  return nanbox_from_int(value);
+VALUE integer(int32_t value) {
+  return SIGNATURE_INTEGER | (uint32_t) value;
 }
 
-nanbox_t create_pointer(HeapValue* value) {
-  return nanbox_from_pointer(value);
+VALUE create_pointer(HeapValue* value) {
+  return SIGNATURE_POINTER | (uint64_t) value;
 }
 
-nanbox_t floating(double value) {
-  return nanbox_from_double(value);
+VALUE floating(double value) {
+  return *(VALUE*)(&value);
 }
 
-nanbox_t character(char value) {
-  HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
-  ptr->type = TYPE_CHAR;
-  ptr->as_char = value;
-  return create_pointer(ptr);
+VALUE character(char value) {
+  return SIGNATURE_CHAR | (uint32_t) value;
 }
 
-nanbox_t list(int count, ...) {
+VALUE list(int count, ...) {
   HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
   ptr->type = TYPE_ARRAY;
 
-  size_t value_buffer_size = sizeof(nanbox_t) * count;
-  ptr->as_array.data = (nanbox_t*) malloc(value_buffer_size);
+  size_t value_buffer_size = sizeof(VALUE) * count;
+  ptr->as_array.data = (VALUE*) malloc(value_buffer_size);
 
   va_list args;
   va_start(args, count);
   
 
   for (int i = 0; i < count; i++) {
-    ptr->as_array.data[i] = va_arg(args, nanbox_t);
+    ptr->as_array.data[i] = va_arg(args, VALUE);
   }
 
   va_end(args);
@@ -50,33 +46,20 @@ nanbox_t list(int count, ...) {
   return create_pointer(ptr);
 }
 
-nanbox_t create_mutable(nanbox_t value) {
-  HeapValue* ptr = (HeapValue*)malloc(sizeof(HeapValue));
-  nanbox_t* ptr_ = (nanbox_t*)malloc(sizeof(nanbox_t));
-  *ptr_ = value;
-  ptr->type = TYPE_MUTABLE;
-  ptr->as_pointer = ptr_;
-  return create_pointer(ptr);
-}
-
-inline nanbox_t get_mutable(nanbox_t value) {
-  return *(((HeapValue*)nanbox_to_pointer(value))->as_pointer);
-}
-
-nanbox_t structure(int length, ...) {
+VALUE structure(int length, ...) {
   HeapValue* dict = (HeapValue*) malloc(sizeof(HeapValue));
   dict->type = TYPE_DICT;
   dict->as_dict.length = length;
 
   dict->as_dict.keys = malloc(sizeof(char*) * length);
-  dict->as_dict.values = malloc(sizeof(nanbox_t) * length);
+  dict->as_dict.values = malloc(sizeof(VALUE) * length);
 
   va_list args;
   va_start(args, length);
 
   for (int i = 0; i < length; i++) {
     dict->as_dict.keys[i] = va_arg(args, char*);
-    dict->as_dict.values[i] = va_arg(args, nanbox_t);
+    dict->as_dict.values[i] = va_arg(args, VALUE);
   }
 
   va_end(args);
@@ -84,38 +67,30 @@ nanbox_t structure(int length, ...) {
   return create_pointer(dict);
 }
 
-nanbox_t* unbox_mutable(nanbox_t value) {
-  return ((HeapValue*)nanbox_to_pointer(value))->as_pointer;
+VALUE unit() {
+  return kNull;
 }
 
-nanbox_t unit() {
-  return nanbox_null();
+VALUE boolean(int value) {
+  return value ? kTrue : kFalse;
 }
 
-nanbox_t boolean(int value) {
-  return value ? nanbox_true() : nanbox_false();
-}
-
-nanbox_t makeLambda(nanbox_t (*f)(nanbox_t)) {
+VALUE makeLambda(VALUE (*f)(VALUE)) {
   HeapValue* lambda = (HeapValue*) malloc(sizeof(HeapValue));
   lambda->type = TYPE_LAMBDA;
   lambda->as_lambda.f = f;
   return create_pointer(lambda);
 }
 
-nanbox_t emptyList() {
-  HeapValue* list_ = (HeapValue*) malloc(sizeof(HeapValue));
-  list_->type = TYPE_ARRAY;
-  list_->as_array.length = 0;
-  list_->as_array.data = NULL;
-  return create_pointer(list_);
+VALUE emptyList() {
+  return list(0);
 }
 
-nanbox_t string(char* value) {
+VALUE string(char* value) {
   HeapValue* string = (HeapValue*) malloc(sizeof(HeapValue));
   string->type = TYPE_ARRAY;
   string->as_array.length = strlen(value);
-  nanbox_t* data = malloc(sizeof(nanbox_t) * strlen(value));
+  VALUE* data = malloc(sizeof(VALUE) * strlen(value));
   for (int i = 0; i < strlen(value); i++) {
     data[i] = character(value[i]);
   }
@@ -125,15 +100,25 @@ nanbox_t string(char* value) {
   return create_pointer(string);
 }
 
-ValueType get_type(nanbox_t value) {
-  if (nanbox_is_pointer(value)) {
-    return ((HeapValue*) nanbox_to_pointer(value))->type;
+ValueType get_type(VALUE value) {
+  uint64_t signature = value & MASK_SIGNATURE;
+  if ((~value & MASK_EXPONENT) != 0) return TYPE_FLOAT;
+
+  // Check for encoded pointer
+  if (signature == SIGNATURE_POINTER) {
+    HeapValue* ptr = decode_pointer(value);
+    return ptr->type;
   }
 
-  if (nanbox_is_int(value)) return TYPE_INTEGER;
-  if (nanbox_is_double(value)) return TYPE_FLOAT;
-  if (nanbox_is_boolean(value)) return TYPE_BOOL;
-  if (nanbox_is_null(value)) return TYPE_NULL;
-  
+  // Short encoded types
+  switch (signature) {
+    case SIGNATURE_NAN:     return TYPE_FLOAT;
+    case SIGNATURE_FALSE:
+    case SIGNATURE_TRUE:    return TYPE_BOOL;
+    case SIGNATURE_NULL:    return TYPE_NULL;
+    case SIGNATURE_INTEGER: return TYPE_INTEGER;
+    case SIGNATURE_CHAR:    return TYPE_CHAR;
+  }
+
   return TYPE_NULL;
 }

@@ -7,13 +7,14 @@ data IRToplevel
   | IRExtern String CType
   | IRDeclare String [CType] CType
   | IRStruct String [IRStructField]
-  deriving Eq
+  | IRGlobalString String String
+  deriving (Eq, Show)
 
 data IRStructField 
   = IRStructField String CType
   | IRStructUnion String [IRStructField]
   | IRStructStruct String [IRStructField]
-  deriving Eq
+  deriving (Eq, Show)
 
 data IRStatement 
   = IRReturn IRExpression
@@ -27,7 +28,7 @@ data IRStatement
   | IRContinue
   | IRDeclarationStatement String IRExpression
   | IRUpdate IRExpression IRExpression
-  deriving Eq
+  deriving (Eq, Show)
 
 data IRExpression
   = IRVariable String 
@@ -43,6 +44,6 @@ data IRExpression
   | IRReference IRExpression
   | IRDictAccess IRExpression String
   | IRIn IRExpression String
-  deriving Eq
+  deriving (Eq, Show)
 
 type CType = String

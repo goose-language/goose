@@ -86,7 +86,7 @@ module Parser
 
   def choice[a](ps: [Parser[a]]): Parser[a] do
     return fun (tokens) do
-      if Array::empty(ps) then
+      if Array::length(ps) == 0 then
         return Tuple(Left("choice failed"), tokens)
       else
         match ps[0](tokens) do

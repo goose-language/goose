@@ -15,7 +15,7 @@ void init_string(struct string *s) {
   s->ptr = malloc(s->len+1);
   if (s->ptr == NULL) {
     fprintf(stderr, "malloc() failed\n");
-    exit(EXIT_FAILURE);
+    exit(0);
   }
   s->ptr[0] = '\0';
 }
@@ -26,7 +26,7 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
   s->ptr = realloc(s->ptr, new_len+1);
   if (s->ptr == NULL) {
     fprintf(stderr, "realloc() failed\n");
-    exit(EXIT_FAILURE);
+    exit(0);
   }
   memcpy(s->ptr+s->len, ptr, size*nmemb);
   s->ptr[new_len] = '\0';
@@ -36,10 +36,10 @@ size_t writefunc(void *ptr, size_t size, size_t nmemb, struct string *s)
 }
 
 
-nanbox_t HTTP_fetch(nanbox_t args) {
+VALUE HTTP_fetch(VALUE args) {
   Array arguments = decode_pointer(args)->as_array;
-  char* url = decode_string(arguments.data[0]);
-  char* headers = decode_string(arguments.data[1]);
+  char* url = decode_string(arguments.data[1]);
+  char* headers = decode_string(arguments.data[2]);
 
   CURL *curl;
   CURLcode res;
@@ -66,4 +66,5 @@ nanbox_t HTTP_fetch(nanbox_t args) {
     throwError("HTTP::fetch: failed to initialize curl");
   }
   
+  return 0;
 }

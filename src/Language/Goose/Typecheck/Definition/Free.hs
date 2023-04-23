@@ -9,7 +9,6 @@ class Free a where
 instance Free Toplevel where
   free (Function name args _ body) = free body S.\\ (S.fromList (map C.annotedName args) `S.union` S.singleton name)
   free (Declaration name _ body) = free body S.\\ S.singleton name
-  free (Extern _) = S.empty
   free (Declare _ _) = S.empty
 
 instance Free Expression where

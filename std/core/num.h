@@ -2,9 +2,9 @@
 #define NUM_H
 #include "value.h"
 
-nanbox_t add(nanbox_t a, nanbox_t b);
-nanbox_t subtract(nanbox_t a, nanbox_t b);
-nanbox_t multiply(nanbox_t a, nanbox_t b);
-nanbox_t divide(nanbox_t a, nanbox_t b);
+VALUE add(VALUE a, VALUE b);
+VALUE subtract(VALUE a, VALUE b);
+VALUE multiply(VALUE a, VALUE b);
+VALUE divide(VALUE a, VALUE b);
 
 #endif

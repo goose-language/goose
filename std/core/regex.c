@@ -7,9 +7,9 @@
 #include "io.h"
 #include "error.h"
 
-nanbox_t Regex_get(nanbox_t args) {
+VALUE Regex_get(VALUE args) {
   int begin; int end;
-  char* string_ = decode_string(index_(args, 0));
+  char* string_ = decode_string(index_(args, 2));
   char* regex = decode_string(index_(args, 1));
   regex_t re;
   regmatch_t match;
@@ -39,9 +39,9 @@ nanbox_t Regex_get(nanbox_t args) {
   return string(word);
 }
 
-nanbox_t Regex_test(nanbox_t args) {
-  char* string_ = decode_string(index_(args, 0));
-  char* regex = decode_string(index_(args, 1));
+VALUE Regex_test(VALUE args) {
+  char* string_ = decode_string(index_(args, 1));
+  char* regex = decode_string(index_(args, 2));
   regex_t re;
   regmatch_t match;
   int status = regcomp(&re, regex, REG_EXTENDED);

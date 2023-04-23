@@ -1,7 +1,39 @@
 #ifndef VALUE_H
 #define VALUE_H
-#include "value/nanbox.h"
 #include <stdlib.h>
+typedef uint64_t VALUE;
+
+// Masks for important segments of a float value
+#define MASK_SIGN        0x8000000000000000
+#define MASK_EXPONENT    0x7ff0000000000000
+#define MASK_QUIET       0x0008000000000000
+#define MASK_TYPE        0x0007000000000000
+#define MASK_SIGNATURE   0xffff000000000000
+#define MASK_PAYLOAD_PTR 0x0000ffffffffffff
+#define MASK_PAYLOAD_INT 0x00000000ffffffff
+
+// Type IDs for short encoded types
+#define MASK_TYPE_NAN     0x0000000000000000
+#define MASK_TYPE_FALSE   0x0001000000000000
+#define MASK_TYPE_TRUE    0x0002000000000000
+#define MASK_TYPE_NULL    0x0003000000000000
+#define MASK_TYPE_INTEGER 0x0004000000000000
+#define MASK_TYPE_CHAR    0x0005000000000000
+
+// Constant short encoded values
+#define kNaN   (MASK_EXPONENT | MASK_QUIET)
+#define kFalse (kNaN | MASK_TYPE_FALSE)
+#define kTrue  (kNaN | MASK_TYPE_TRUE)
+#define kNull  (kNaN | MASK_TYPE_NULL)
+
+// Signatures of encoded types
+#define SIGNATURE_NAN     kNaN
+#define SIGNATURE_FALSE   kFalse
+#define SIGNATURE_TRUE    kTrue
+#define SIGNATURE_NULL    kNull
+#define SIGNATURE_INTEGER (kNaN | MASK_TYPE_INTEGER)
+#define SIGNATURE_CHAR    (kNaN | MASK_TYPE_CHAR)
+#define SIGNATURE_POINTER (kNaN | MASK_SIGN)
 
 // The type of the stored value
 typedef enum {
@@ -13,12 +45,11 @@ typedef enum {
   TYPE_ARRAY,
   TYPE_DICT,
   TYPE_LAMBDA,
-  TYPE_MUTABLE,
 } ValueType;
 
 // Container for arrays
 typedef struct {
-  nanbox_t* data;
+  VALUE* data;
   uint32_t length;
   uint32_t capacity;
 } Array;
@@ -26,14 +57,14 @@ typedef struct {
 // Container for dictionaries
 typedef struct {
   char** keys;
-  nanbox_t* values;
+  VALUE* values;
   uint32_t capacity;
   uint32_t length;
 } Dict;
 
 // Container for lambdas
 typedef struct {
-  nanbox_t (*f)(nanbox_t args);
+  VALUE (*f)(VALUE args);
 } Lambda;
 
 // Container type for values
@@ -44,26 +75,20 @@ typedef struct {
     Array as_array;
     Dict as_dict;
     Lambda as_lambda;
-    char as_char;
-    nanbox_t* as_pointer;
   };
 } HeapValue;
 
-nanbox_t integer(int32_t value);
-nanbox_t floating(double value);
-nanbox_t character(char value);
-nanbox_t list(int length, ...);
-nanbox_t unit(void);
-nanbox_t boolean(int value);
-nanbox_t structure(int length, ...);
-nanbox_t makeLambda(nanbox_t (*f)(nanbox_t args));
-nanbox_t string(char* value);
-nanbox_t emptyList();
-ValueType get_type(nanbox_t value);
-nanbox_t create_pointer(HeapValue* ptr);
-nanbox_t create_mutable(nanbox_t value);
-nanbox_t get_mutable(nanbox_t value);
-
-nanbox_t* unbox_mutable(nanbox_t value);
+VALUE integer(int32_t value);
+VALUE floating(double value);
+VALUE character(char value);
+VALUE list(int length, ...);
+VALUE unit(void);
+VALUE boolean(int value);
+VALUE structure(int length, ...);
+VALUE makeLambda(VALUE (*f)(VALUE args));
+VALUE string(char* value);
+VALUE emptyList();
+ValueType get_type(VALUE value);
+VALUE create_pointer(HeapValue* ptr);
 
 #endif

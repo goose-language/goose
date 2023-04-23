@@ -2,14 +2,14 @@
 #include "eq.h"
 #include "conversion.h"
 
-nanbox_t eq(nanbox_t a, nanbox_t b) {
+VALUE eq(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
   if (type_a == TYPE_NULL && type_b == TYPE_NULL) {
     return boolean(1);
   } else if (type_a == TYPE_INTEGER && type_b == TYPE_INTEGER) {
-    return boolean(a.as_int64 == b.as_int64);
+    return boolean(a == b);
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_FLOAT) {
     float a_float = decode_floating(a);
     float b_float = decode_floating(b);
@@ -50,7 +50,7 @@ nanbox_t eq(nanbox_t a, nanbox_t b) {
     }
 
     for (int i = 0; i < a_dict.length; i++) {
-      int boo = !eq(a_dict.values[i], b_dict.values[i]).as_int64;
+      int boo = !eq(a_dict.values[i], b_dict.values[i]);
       if (boo) {
         return boolean(0);
       }
@@ -62,12 +62,12 @@ nanbox_t eq(nanbox_t a, nanbox_t b) {
   }
 }
 
-nanbox_t neq(nanbox_t a, nanbox_t b) {
+VALUE neq(VALUE a, VALUE b) {
   int boo = decode_boolean(eq(a, b));
   return boolean(!boo);
 }
 
-nanbox_t lt(nanbox_t a, nanbox_t b) {
+VALUE lt(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
@@ -91,7 +91,7 @@ nanbox_t lt(nanbox_t a, nanbox_t b) {
   }
 }
 
-nanbox_t gt(nanbox_t a, nanbox_t b) {
+VALUE gt(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
 
@@ -115,14 +115,12 @@ nanbox_t gt(nanbox_t a, nanbox_t b) {
   }
 }
 
-nanbox_t lte(nanbox_t a, nanbox_t b) {
+VALUE lte(VALUE a, VALUE b) {
   int boo = decode_boolean(gt(a, b));
   return boolean(!boo);
 }
 
-nanbox_t gte(nanbox_t a, nanbox_t b) {
+VALUE gte(VALUE a, VALUE b) {
   int boo = decode_boolean(lt(a, b));
   return boolean(!boo);
 }
-
-

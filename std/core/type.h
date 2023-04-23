@@ -3,8 +3,8 @@
 
 #include "value.h"
 
-nanbox_t Type_of(nanbox_t value);
-nanbox_t String_from(nanbox_t value);
-char* toString(nanbox_t value);
+VALUE Type_of(VALUE value);
+VALUE String_from(VALUE value);
+char* toString(VALUE value);
 
 #endif

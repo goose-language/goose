@@ -2,6 +2,7 @@
 #include "color.h"
 #include "execinfo.h"
 #include <stdarg.h>
+#include <stdlib.h>
 
 void throwError(char* message, ...) {
   printf("%s[ERROR]%s ", BRED, COLOR_RESET);

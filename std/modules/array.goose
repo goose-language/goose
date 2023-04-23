@@ -4,58 +4,80 @@ public module Array
   declare slice[a](array: [a], idx: int): [a]
   declare length[a](array: [a]): int
   declare create[a](length: int, value: a): [a]
-  declare push[a](array: Mutable[[a]], value: a): nil
+  declare push[a](array: [a], value: a): nil
 
   def empty[a](arr: [a]): bool do return Array::length(arr) == 0 end
 
   def concat[a](arr1: [a], arr2: [a]): [a] do
-    def arr: Mutable[[a]] = mutable []
-    for item in arr1 do
-      Array::push(arr, item)
-    end
-    for item in arr2 do
-      Array::push(arr, item)
-    end
-    return *arr
+    return arr1 + arr2
   end
   
   def map[a, b](arr: [a], f: fun(a): b): [b] do
     if Array::empty(arr) then return []
-    def acc: Mutable[[b]] = mutable []
+    def acc2: [b] = []
     for item in arr do
-      Array::push(acc, f(item))
+      acc2 = acc2 + [f(item)]
     end
-    return *acc
+    return acc2
   end
 
   def slice[a](array: [a], idx: int): [a] do
-    def i = mutable 0
-    def arr: Mutable[[a]] = mutable []
-    while *i < Array::length(array) do
-      if *i >= idx then Array::push(arr, array[*i])
-      i = *i + 1
+    def i = 0
+    def arr: [a] = []
+    while i < Array::length(array) do
+      if i >= idx then arr = arr + [array[i]]
+      i = i + 1
     end
-    return *arr
+    return arr
+  end
+
+  def sliceFromTo[a](array: [a], from: int, to: int): [a] do
+    def i = 0
+    def arr: [a] = []
+    while i < Array::length(array) do
+      if i >= from && i < to then arr = arr + [array[i]]
+      i = i + 1
+    end
+    return arr
+  end
+
+  def reduce[a, b](arr: [a], init: b, f: fun(b, a): b): b do
+    if Array::empty(arr) then return init
+    def acc = init
+    for item in arr do
+      acc = f(acc, item)
+    end
+    return acc
+  end
+
+  def join[a](arr: [a], sep: a): [a] do
+    if Array::empty(arr) then return []
+    def res: [a] = []
+    for item in arr do
+      res = res + [item]
+      if item != arr[Array::length(arr) - 1] then res = res + [sep]
+    end
+    return res
   end
 
   def startsWith[a](arr: [a], prefix: [a]): bool do
     if Array::length(arr) < Array::length(prefix) then return false
-    def i = mutable 0
+    def i = 0
     for item in prefix do
-      if item != arr[*i] then return false
-      i = *i + 1
+      if item != arr[i] then return false
+      i = i + 1
     end
     return true
   end
 
   def reverse[a](arr: [a]): [a] do
-    def i = mutable Array::length(arr) - 1
-    def acc: Mutable[[a]] = mutable []
-    while *i >= 0 do
-      Array::push(acc, arr[*i])
-      i = *i - 1
+    def i = Array::length(arr) - 1
+    def acc1: [a] = []
+    while i >= 0 do
+      acc1 = acc1 + [arr[i]]
+      i = i - 1
     end
-    return *acc
+    return acc1
   end
   
   declare has[a](dict: a, key: string): bool
