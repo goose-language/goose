@@ -61,9 +61,7 @@ instance Free T.Pattern where
 instance Free ANFDefinition where
   free (DDeclaration x e) = free e S.\\ S.singleton x
   free (DFunction name args body) = free body S.\\ S.fromList (name:args)
-  free (DExtern _) = S.empty
   free (DDeclare _) = S.empty
-
 
 freeBody :: [ANFStatement] -> S.Set String
 freeBody body = fst $ foldl (\(acc, excluded) -> \case
