@@ -30,8 +30,8 @@
  - [x] Imperative programming
     - [x] Imperative-style loops
     - [x] Statements as expression
-    - [x] Mutable variables
- - [x] Native compilation using CLang
+    - [x] Mutable in-scope variables
+ - [x] Native compilation using LLVM
  - [ ] bootstrap compiler
  - [x] scalable type system 
  - [x] powerful module system
