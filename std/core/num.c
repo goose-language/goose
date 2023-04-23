@@ -38,7 +38,7 @@ VALUE add(VALUE a, VALUE b) {
     new_heap_value->as_array = new_array;
     return create_pointer(new_heap_value);
   } else {
-    throwError("Cannot add %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
+    throwError("Cannot add %s and %s together", decode_string(Type_of(list(2, unit(), a))), decode_string(Type_of(list(2, unit(),  b))));
   }
   return unit();
 }
@@ -56,7 +56,7 @@ VALUE subtract(VALUE a, VALUE b) {
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
     return floating(a - b);
   } else {
-    throwError("Cannot subtract %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
+    throwError("Cannot subtract %s and %s together", decode_string(Type_of(list(2, unit(), a))), decode_string(Type_of(list(2, unit(), b))));
   }
   return unit();
 }
@@ -74,7 +74,7 @@ VALUE multiply(VALUE a, VALUE b) {
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
     return floating(a * b);
   } else {
-    throwError("Cannot multiply %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
+    throwError("Cannot multiply %s and %s together", decode_string(Type_of(list(2, unit(), a))), decode_string(Type_of(list(2, unit(), b))));
     exit(0);
   }
   return unit();
@@ -93,7 +93,7 @@ VALUE divide(VALUE a, VALUE b) {
   } else if (type_a == TYPE_FLOAT && type_b == TYPE_INTEGER) {
     return floating(a / b);
   } else {
-    throwError("Cannot divide %s and %s together", decode_string(Type_of(list(1, a))), decode_string(Type_of(list(1, b))));
+    throwError("Cannot divide %s and %s together", decode_string(Type_of(list(2, unit(), a))), decode_string(Type_of(list(2, unit(), b))));
     exit(0);
   }
   return unit();

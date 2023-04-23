@@ -9,8 +9,8 @@
 
 VALUE Regex_get(VALUE args) {
   int begin; int end;
-  char* string_ = decode_string(index_(args, 1));
-  char* regex = decode_string(index_(args, 2));
+  char* string_ = decode_string(index_(args, 2));
+  char* regex = decode_string(index_(args, 1));
   regex_t re;
   regmatch_t match;
   char* word;

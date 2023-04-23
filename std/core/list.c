@@ -10,6 +10,37 @@
 #include "garbage.h"
 #include "io.h"
 
+int length(VALUE list) {
+  if (get_type(list) == TYPE_ARRAY) {
+    return decode_pointer(list)->as_array.length;
+  } else {
+    return 0;
+  }
+}
+
+VALUE in(VALUE dict, char* key) {
+  if (get_type(dict) == TYPE_DICT) {
+    Dict heap = decode_pointer(dict)->as_dict;
+    for (int i = 0; i < heap.length; i++) {
+      if (strcmp(heap.keys[i], key) == 0) {
+        return boolean(1);
+      }
+    }
+    return boolean(0);
+  } else if (get_type(dict) == TYPE_ARRAY) {
+    Array heap = decode_pointer(dict)->as_array;
+    for (int i = 0; i < heap.length; i++) {
+      if (eq(heap.data[i], string(key))) {
+        return boolean(1);
+      }
+    }
+    return boolean(0);
+  } else {
+    throwError("expected structure or list, got %s", decode_string(Type_of(list(2, unit(), dict))));
+    return unit();
+  }
+}
+
 VALUE index_(VALUE v, int i) {
   if (get_type(v) == TYPE_ARRAY) {
     Array list_ = decode_pointer(v)->as_array;
@@ -19,7 +50,7 @@ VALUE index_(VALUE v, int i) {
       throwError("index out of bounds (%d) in %s", i, toString(v));
     }
   } else {
-    throwError("expected list, got %s", decode_string(Type_of(list(1, v))));
+    throwError("expected list, got %s", decode_string(Type_of(list(2, unit(), v))));
   }
   return unit();
 }
@@ -41,7 +72,7 @@ VALUE Array_push(VALUE args) {
 
     return unit();
   } else {
-    throwError("expected list, got %s", decode_string(Type_of(list(1, lst))));
+    throwError("expected list, got %s", decode_string(Type_of(list(2, unit(), lst))));
   }
   return result;
 }
@@ -51,7 +82,7 @@ VALUE Array_length(VALUE args) {
   if (get_type(array) == TYPE_ARRAY) {
     return integer(decode_pointer(array)->as_array.length);
   } else {
-    throwError("expected list, got %s", decode_string(Type_of(list(1, array))));
+    throwError("expected list, got %s", decode_string(Type_of(list(2, unit(), array))));
     return unit();
   }
 }
@@ -108,7 +139,7 @@ VALUE IO_clone(VALUE args)
       heap->as_array.length = decode_pointer(item)->as_array.length;
       heap->as_array.data = malloc(sizeof(VALUE) * heap->as_array.length);
       for (int i = 0; i < heap->as_array.length; i++) {
-        heap->as_array.data[i] = IO_clone(list(1, decode_pointer(item)->as_array.data[i]));
+        heap->as_array.data[i] = IO_clone(list(2, unit(), decode_pointer(item)->as_array.data[i]));
       }
       return create_pointer(heap);
     }
@@ -120,7 +151,7 @@ VALUE IO_clone(VALUE args)
       heap->as_dict.values = malloc(sizeof(VALUE) * heap->as_dict.length);
       heap->as_dict.keys = malloc(sizeof(char*) * heap->as_dict.length);
       for (int i = 0; i < heap->as_dict.length; i++) {
-        heap->as_dict.values[i] = IO_clone(list(1, item_->as_dict.values[i]));
+        heap->as_dict.values[i] = IO_clone(list(2, unit(), item_->as_dict.values[i]));
         heap->as_dict.keys[i] = malloc(sizeof(char) * strlen(item_->as_dict.keys[i]));
         strcpy(heap->as_dict.keys[i], item_->as_dict.keys[i]);
       }
@@ -136,7 +167,7 @@ VALUE IO_clone(VALUE args)
       return create_pointer(heap);
     }
     default: 
-      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(1, (VALUE[1]) { item }))));
+      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(2, unit(), item))));
   }
   return result;
 }
@@ -148,7 +179,7 @@ VALUE Array_create(VALUE args) {
   int size_ = decode_integer(size);
   VALUE* data = malloc(sizeof(VALUE) * size_);
   for (int i = 0; i < size_; i++) {
-    data[i] = IO_clone(list(1, value));
+    data[i] = IO_clone(list(2, unit(), value));
   }
   HeapValue* heap = malloc(sizeof(HeapValue));
   heap->type = TYPE_ARRAY;

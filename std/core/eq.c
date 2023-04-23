@@ -124,5 +124,3 @@ VALUE gte(VALUE a, VALUE b) {
   int boo = decode_boolean(lt(a, b));
   return boolean(!boo);
 }
-
-

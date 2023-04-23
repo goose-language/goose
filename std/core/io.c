@@ -93,7 +93,7 @@ VALUE IO_print(VALUE args) {
       } else {
         printf("[");
         for (int i = 0; i < list_.length; i++) {
-          IO_print(list(1, list_.data[i]));
+          IO_print(list(2, unit(), list_.data[i]));
           if (i != list_.length - 1) printf(", ");
         }
         printf("]");
@@ -108,7 +108,7 @@ VALUE IO_print(VALUE args) {
         printf("(");
         Array list_ = getVariantArguments(v)->as_array;
         for (int i = 0; i < list_.length; i++) {
-          IO_print(list(1, list_.data[i]));
+          IO_print(list(2, unit(), list_.data[i]));
           if (i != list_.length - 1) printf(", ");
         }
         printf(")");
@@ -116,7 +116,7 @@ VALUE IO_print(VALUE args) {
         printf("{");
         for (int i = 0; i < dict.length; i++) {
           printf("%s: ", dict.keys[i]);
-          IO_print(list(1, dict.values[i]));
+          IO_print(list(2, unit(), dict.values[i]));
           if (i != dict.length - 1) printf(", ");
         }
         printf("}");
@@ -139,12 +139,13 @@ void IO_exit(VALUE args) {
   exit(decode_integer(v));
 }
 VALUE IO_readFile(VALUE args) {
-  VALUE path = index_(args, 0);
+  VALUE path = index_(args, 1);
 
   FILE* file = fopen(decode_string(path), "r");
   fseek(file, 0L, SEEK_END);
   size_t len = ftell(file);
   rewind(file);
+
   char* buffer = malloc(sizeof(char) * len);
   int i = 0;
   char c;
@@ -158,8 +159,8 @@ VALUE IO_readFile(VALUE args) {
 }
 
 VALUE IO_writeFile(VALUE args) {
-  VALUE path = index_(args, 0);
-  VALUE content = index_(args, 1);
+  VALUE path = index_(args, 1);
+  VALUE content = index_(args, 2);
 
   FILE* file = fopen(decode_string(path), "w");
   fputs(decode_string(content), file);

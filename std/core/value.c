@@ -83,11 +83,7 @@ VALUE makeLambda(VALUE (*f)(VALUE)) {
 }
 
 VALUE emptyList() {
-  HeapValue* list_ = (HeapValue*) malloc(sizeof(HeapValue));
-  list_->type = TYPE_ARRAY;
-  list_->as_array.length = 0;
-  list_->as_array.data = NULL;
-  return create_pointer(list_);
+  return list(0);
 }
 
 VALUE string(char* value) {
