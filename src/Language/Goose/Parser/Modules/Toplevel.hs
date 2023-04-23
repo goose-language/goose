@@ -18,7 +18,6 @@ parseToplevel parseExpression = P.choice [
     P.try $ parseDeclaration parseExpression,
     parseFunction parseExpression,
     parsePublic parseExpression,
-    parseExtern,
     P.try parseImportAs,
     parseImport
   ]
@@ -36,7 +35,7 @@ parseEnumeration = L.locate $ do
   L.reserved "enum"
   name <- L.capitalized
   generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
-  values <- P.many (C.Annoted <$> L.identifier <*> P.option [] (L.parens (L.commaSep D.parseDeclaration)))
+  values <- P.many (C.Annoted <$> L.identifier <*> P.option [] (L.parens (L.commaSep D.parseDeclaration)))
   L.reserved "end"
   return $ C.Enumeration name generics values
 
@@ -46,15 +45,14 @@ parseType = L.locate $ do
   name <- L.capitalized
   generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
   L.reservedOp "="
-  body <- D.parseDeclaration
-  return $ C.Type name generics body
+  C.Type name generics <$> D.parseDeclaration
 
 parseFunction :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseFunction parseExpression = L.locate $ do
   L.reserved "def"
   name <- L.identifier
   generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
-  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> (P.optionMaybe $ L.reservedOp ":" *> D.parseDeclaration)))
+  args <- L.parens (L.commaSep (C.Annoted <$> L.identifier <*> P.optionMaybe (L.reservedOp ":" *> D.parseDeclaration)))
   (ret, body) <- P.choice [
       P.try $ do
         L.reservedOp ":"
@@ -83,8 +81,7 @@ parseDeclaration expr = L.locate $ do
   name <- L.identifier
   args <- P.optionMaybe $ L.reserved ":" *> D.parseDeclaration
   L.reservedOp "="
-  value <- expr
-  return $ C.Declaration (C.Annoted name args) value 
+  C.Declaration (C.Annoted name args) <$> expr
 
 parseDeclare :: Monad m => L.Goose m C.Toplevel
 parseDeclare = L.locate $ do
@@ -93,8 +90,7 @@ parseDeclare = L.locate $ do
   gens <- P.option [] $ L.brackets $ L.commaSep (P.many1 P.lower)
   args <- P.optionMaybe $ L.parens (L.commaSep (P.optionMaybe (L.identifier >> L.reservedOp ":") *> D.parseDeclaration))
   L.reservedOp ":"
-  value <- D.parseDeclaration
-  return $ C.Declare name gens args value
+  C.Declare name gens args <$> D.parseDeclaration
 
 parseModule :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
 parseModule parseExpression = L.locate $ do
@@ -104,26 +100,14 @@ parseModule parseExpression = L.locate $ do
   L.reserved "end"
   return $ C.Namespace name body
 
-parseExtern :: Monad m => L.Goose m C.Toplevel
-parseExtern = L.locate $ do
-  L.reserved "extern"
-  name <- L.identifier
-  gens <- L.brackets $ L.commaSep (P.many1 P.lower)
-  args <- L.parens (L.commaSep (P.optionMaybe (L.identifier <* L.reservedOp ":") *> D.parseDeclaration))
-  L.reservedOp ":"
-  ret <- D.parseDeclaration
-  return $ C.Extern name gens args ret
-
 parseImport :: Monad m => L.Goose m C.Toplevel
 parseImport = L.locate $ do
   L.reserved "import"
-  name <- L.stringLiteral
-  return $ C.Import name
+  C.Import <$> L.stringLiteral
 
 parseImportAs :: Monad m => L.Goose m C.Toplevel
 parseImportAs = L.locate $ do
   L.reserved "import"
   name <- L.stringLiteral
   L.reserved "as"
-  alias <- L.identifier
-  return $ C.ImportAs name alias
+  C.ImportAs name <$> L.identifier

@@ -56,14 +56,6 @@ data Toplevel
   -- | Of the form: import moduleName as alias
   | ImportAs Name Name
 
-  -- | An extern declaration
-  -- | Of the form: extern declaration
-  | Extern {
-      externName :: Name,
-      externGenerics :: [String],
-      externArgs :: [Declaration],
-      externReturn :: Declaration }
-
   -- | A function declaration
   -- | Of the form: declare functionName(args): ret
   | Declare {
@@ -170,7 +162,6 @@ instance Show Toplevel where
   show (Type name gens constructor) = "type " ++ name ++ show gens ++ " = " ++ show constructor
   show (Enumeration name gens members) = "enum " ++ name ++ show gens ++ " { " ++ intercalate ", " (map (\(Annoted name' tys) -> if null tys then name' else name' ++ "(" ++ intercalate ", " (map show tys) ++ ")") members) ++ " }"
   show (Namespace name body) = "module " ++ name ++ " " ++ intercalate "; " (map show body) ++ " end"
-  show (Extern name gens decls ret) = "extern " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show decls) ++ "): " ++ show ret
   show (Import name) = "import " ++ name
   show (ImportAs name alias) = "import " ++ name ++ " as " ++ alias
   show (Declare name gens (Just args) ret) = "def " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ "): " ++ show ret

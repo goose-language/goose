@@ -83,12 +83,6 @@ analyseToplevel (Namespace name toplevels :>: _) = do
       toplevels' <- concat <$> mapM analyseToplevel toplevels
       ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
       return $ keepPublic toplevels'
-analyseToplevel (Extern name gens decl ret :>: pos) = do
-  decl' <- mapM (`resolveImportedType` pos) decl
-  ret' <- resolveImportedType ret pos
-  name' <- createName name
-  ST.modify $ \s -> s { mappings = M.insert name' name (mappings s) }
-  return [Extern name gens decl' ret' :>: pos]
 analyseToplevel (Declare name gens decl ret :>: pos) = do
   decl' <- case decl of
     Just decl -> Just <$> mapM (`resolveImportedType` pos) decl
