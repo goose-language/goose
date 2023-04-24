@@ -132,12 +132,16 @@ convertToplevel (IR.IRFunction name args body) = do
   return ()
   where args' = [(AST.i64, IRB.ParameterName $ fromString "args")]
 convertToplevel (IR.IRDeclare name args _) = do
-  let argTypes = map (const AST.i64) args
-  let retType = AST.i64
-  let ftype = AST.ptr $ AST.FunctionType retType argTypes False
-  ST.modify . BF.first $ M.insert name $ ConstantOperand $ C.GlobalReference ftype (AST.Name $ fromString name)
-  IRB.extern (AST.Name $ fromString name) [AST.i64] AST.i64
-  return ()
+  case args of
+    Just x -> do
+      let argTypes = map (const AST.i64) x
+      let retType = AST.i64
+      let ftype = AST.ptr $ AST.FunctionType retType argTypes False
+      IRB.extern (AST.Name $ fromString name) [AST.i64] AST.i64
+      ST.modify . BF.first $ M.insert name $ ConstantOperand $ C.GlobalReference ftype (AST.Name $ fromString name)
+    Nothing -> do
+      IRB.global (AST.Name $ fromString name) AST.i64 $ C.Int 64 0
+      ST.modify . BF.first $ M.insert name $ ConstantOperand $ C.GlobalReference (AST.ptr AST.i64) (AST.Name $ fromString name)
 convertToplevel _ = return ()
 
 convertStatement :: LLVM m => IR.IRStatement -> m ()

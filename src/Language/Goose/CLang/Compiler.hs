@@ -15,8 +15,8 @@ import Data.List
 compileToplevel :: ANFDefinition -> Maybe IRToplevel
 compileToplevel (DFunction name args body) = Just $ IRFunction (varify name) (map varify args) (map compileStatement body)
 compileToplevel (DDeclaration name e) = Just $ IRDeclaration (varify name) (compileExpression e)
-compileToplevel (DDeclare (Annoted name (_ :-> _))) = Just $ IRDeclare (varify name) [rttiName] rttiName
-compileToplevel (DDeclare (Annoted name _)) = Just $ IRDeclare (varify name) [] rttiName
+compileToplevel (DDeclare (Annoted name (_ :-> _))) = Just $ IRDeclare (varify name) (Just [rttiName]) rttiName
+compileToplevel (DDeclare (Annoted name _)) = Just $ IRDeclare (varify name) Nothing rttiName
 from :: Type -> CType
 from _ = rttiName
 
@@ -84,7 +84,7 @@ compileExpression (EMutable e) = IRApplication (IRVariable "create_mutable") [co
 compileExpression (EDereference e) = IRApplication (IRVariable "get_mutable") [compileExpression e]
 
 generateDeclarations :: [String] -> [IRToplevel]
-generateDeclarations = map (\x -> IRDeclare x [rttiName] rttiName)
+generateDeclarations = map (\x -> IRDeclare x (Just [rttiName]) rttiName)
 
 compile :: [ANFDefinition] -> [IRToplevel]
 compile xs = do

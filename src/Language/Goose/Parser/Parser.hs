@@ -20,6 +20,9 @@ type SourceFile = String
 parseGoose :: Monad m => SourceFile -> String -> m (Either P.ParseError [C.Located C.Toplevel])
 parseGoose = P.runParserT (L.whiteSpace *> P.many (T.parseToplevel parseExpression) <* P.eof) ()
 
+runGoose :: Monad m => SourceFile -> String -> L.Parser m a -> m (Either P.ParseError a)
+runGoose file src p = P.runParserT (L.whiteSpace *> p <* P.eof) () file src
+
 makeUnaryOp :: Alternative f => f (a -> a) -> f (a -> a)
 makeUnaryOp s = foldr1 (.) . reverse <$> some s
 

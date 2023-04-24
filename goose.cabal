@@ -62,6 +62,10 @@ library
     exposed-modules:
         Log.Error
 
+        CLI.CLI
+        CLI.Phases
+        CLI.REPL
+
         Language.Goose.CST.Annoted
         Language.Goose.CST.Located
         Language.Goose.CST.Literal
@@ -134,7 +138,10 @@ library
       , llvm-hs
       , llvm-hs-pure
       , bytestring
-      , int-cast
+      , optparse-applicative
+      , temporary
+      , repline
+      , haskeline
 
     -- Directories containing source files.
     hs-source-dirs:   src

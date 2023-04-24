@@ -49,8 +49,8 @@ instance Generation IRToplevel where
     fields' <- mapM generate fields
     return $ "struct " ++ varify name ++ " { " ++ unwords fields' ++ " };"
   generate (IRDeclare name args ret) = case args of
-    [] -> return $ ret ++ " " ++ varify name ++ ";"
-    _ -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args ++ ");"
+    Nothing -> return $ ret ++ " " ++ varify name ++ ";"
+    Just args -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args ++ ");"
   generate (IRGlobalString name str) = return $ "const char*" ++ varify name ++ " = " ++ show str ++ ";"
 
 instance Generation IRStructField where
