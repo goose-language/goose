@@ -5,7 +5,7 @@ data IRToplevel
   = IRFunction String [String] [IRStatement]
   | IRDeclaration String IRExpression
   | IRExtern String CType
-  | IRDeclare String [CType] CType
+  | IRDeclare String (Maybe [CType]) CType
   | IRStruct String [IRStructField]
   | IRGlobalString String String
   deriving (Eq, Show)
