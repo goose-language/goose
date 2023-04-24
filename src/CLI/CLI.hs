@@ -5,6 +5,7 @@ import System.Info
 import System.Directory.Internal.Prelude (exitFailure)
 import System.Directory (doesFileExist)
 import CLI.Phases (compileFromString)
+import CLI.REPL (runREPL)
 
 data CLI =
     Compile
@@ -40,9 +41,7 @@ runCLI = do
       putStrLn "Run"
       putStrLn $ "Input: " ++ input
       putStrLn $ "Libraries: " ++ show (splitOnSep libraries ',')
-    Repl libraries -> do
-      putStrLn "Repl"
-      putStrLn $ "Libraries: " ++ show (splitOnSep libraries ',')
+    Repl libraries -> runREPL [] (splitOnSep libraries ',')
   where
     opts = info (cli <**> helper)
       ( fullDesc
@@ -51,7 +50,9 @@ runCLI = do
 
 cli :: Parser CLI
 cli = subparser
-  ( command "compile" (info compiler (progDesc "Compile a Goose program")) )
+  ( command "compile" (info compiler (progDesc "Compile a file"))
+ <> command "run" (info runner (progDesc "Run a file"))
+ <> command "repl" (info repl (progDesc "Run the REPL")) )
 
 compiler :: Parser CLI
 compiler = Compile
@@ -63,8 +64,8 @@ compiler = Compile
 runner :: Parser CLI
 runner = Run
   <$> argument str (metavar "INPUT")
-  <*> strOption (long "includes" <> short 'i' <> metavar "LIBRARY" <> help "Library to link")
+  <*> strOption (long "includes" <> short 'i' <> metavar "LIBRARY" <> help "Library to link" <> value "")
 
 repl :: Parser CLI
 repl = Repl
-  <$> strOption (long "includes" <> short 'i' <> metavar "LIBRARY" <> help "Library to link")
+  <$> strOption (long "includes" <> short 'i' <> metavar "LIBRARY" <> help "Library to link" <> value "")
