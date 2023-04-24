@@ -140,6 +140,8 @@ library
       , bytestring
       , optparse-applicative
       , temporary
+      , repline
+      , haskeline
 
     -- Directories containing source files.
     hs-source-dirs:   src
