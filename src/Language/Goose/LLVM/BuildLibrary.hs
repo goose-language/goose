@@ -18,15 +18,15 @@ buildExecutable ast libs flags output = do
   let libraries = CL.includeLibrary
   IO.findExecutable "clang" >>= \case
     Just command -> do
-      withTempDirectory getGoosePath "build" $ \dir -> (do
-        current <- getCurrentDirectory
+      current <- getCurrentDirectory
+      withTempDirectory current "build" $ \dir -> (do
         setCurrentDirectory dir
-        IO.callProcess command $ libraries ++ libs ++ ["-c", "-w", "-lcurl"] ++ map ("-l"++) flags
+        IO.callProcess command $ libraries ++ map (current </>) libs ++ ["-c", "-w", "-lcurl"] ++ map ("-l"++) flags
         x <- LLVM.runCompiler (compile ast)
         writeFile (dir </> "main.ll") x
         IO.callProcess "llc" [dir </> "main.ll", "-filetype=obj", "-o", dir </> "main.o"]
         setCurrentDirectory current
-        IO.callCommand . unwords $ [command, dir </> "*.o", "-o", output, "-w"] ++ map ("-l"++) flags)
+        IO.callCommand . unwords $ [command, dir </> "*.o", "-o", output, "-w", "-lcurl"] ++ map ("-l"++) flags)
     Nothing -> putStrLn "No CLang compiler LLVM found!"
 
 buildAndRun :: [ANFDefinition] -> [String] -> [String] -> IO (Maybe String)
