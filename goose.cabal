@@ -64,6 +64,7 @@ library
 
         CLI.CLI
         CLI.Phases
+        CLI.REPL
 
         Language.Goose.CST.Annoted
         Language.Goose.CST.Located
@@ -138,6 +139,7 @@ library
       , llvm-hs-pure
       , bytestring
       , optparse-applicative
+      , temporary
 
     -- Directories containing source files.
     hs-source-dirs:   src
