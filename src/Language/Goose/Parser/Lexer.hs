@@ -84,6 +84,9 @@ decimal = Token.decimal lexer
 lexeme :: Monad m => Parser m a -> Parser m a
 lexeme = Token.lexeme lexer
 
+parseEither :: Goose m a -> Goose m b -> Parser m (Either (Located a) (Located b))
+parseEither pa pb = (Left <$> pa) <|> (Right <$> pb)
+
 lowered :: Monad m => Parser m String
 lowered = lexeme $ do
   c <- lower
