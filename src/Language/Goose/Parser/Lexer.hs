@@ -8,6 +8,9 @@ import Data.Char
 type Goose m a = Parser m (Located a)
 type Parser m a  = ParsecT String () m a
 
+reservedWords :: [String]
+reservedWords = ["enum", "end", "public", "module", "def", "for", "in", "do", "while", "break", "if", "then", "else", "import", "extern", "return", "declare", "fun", "match", "type", "mutable"]
+
 languageDef :: Monad m => Token.GenLanguageDef String u m
 languageDef =
   Token.LanguageDef {
@@ -20,7 +23,7 @@ languageDef =
             , Token.opLetter        = oneOf ":!#$%&*+./<=>?@\\^|-~"
             , Token.opStart         = Token.opLetter languageDef
             , Token.identLetter     = alphaNum <|> char '_' <|> char '\''
-            , Token.reservedNames   = ["enum", "end", "public", "module", "def", "for", "in", "do", "while", "break", "if", "then", "else", "import", "extern", "return", "declare", "fun", "match", "type", "mutable"]
+            , Token.reservedNames   = reservedWords
             , Token.reservedOpNames = ["(", ")", "*", "+", "-", "/", "{", "}", "[", "]", "<", ">", "=", "->", "::"] }
 
 lexer :: Monad m => Token.GenTokenParser String u m
@@ -85,7 +88,7 @@ lexeme :: Monad m => Parser m a -> Parser m a
 lexeme = Token.lexeme lexer
 
 parseEither :: Goose m a -> Goose m b -> Parser m (Either (Located a) (Located b))
-parseEither pa pb = (Left <$> pa) <|> (Right <$> pb)
+parseEither pa pb = (Left <$> try pa) <|> (Right <$> pb)
 
 lowered :: Monad m => Parser m String
 lowered = lexeme $ do
