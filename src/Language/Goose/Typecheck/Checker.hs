@@ -93,7 +93,7 @@ inferExpression (C.Located pos (C.Sequence exprs)) = do
   return (makeType t1, A.Sequence es)
 inferExpression (C.Located pos (C.List exprs)) = do
   tv <- fresh
-  (es') <- CM.forM exprs (\e -> do
+  es' <- CM.forM exprs (\e -> do
     (t, e') <- local' $ inferExpression e
     unify (t :~: tv, pos)
     return e')
@@ -214,14 +214,14 @@ inferPattern (C.Located _ (P.LiteralPattern lit)) = do
 inferPattern (C.Located pos (P.ListPattern ps)) = do
   tv <- fresh
   (ts, ps', envs) <- L.unzip3 <$> mapM inferPattern ps
-  CM.unless (length ts == 0) $ unify (TList (last ts) :~: tv, pos)
+  CM.unless (null ts) $ unify (TList (last ts) :~: tv, pos)
   return (TList tv, A.PList ps', M.unions envs)
 inferPattern (C.Located _ (P.StructurePattern ps)) = do
   (fields, ps', envs) <- L.unzip3 <$> mapM (\(name, p) -> do
     (t, p', env) <- inferPattern p
     return ((name, p'), (name, t), env)) ps
   return (TRec ps', A.PStructure fields, M.unions envs)
-inferPattern (C.Located _ (P.WildcardPattern)) = do
+inferPattern (C.Located _ P.WildcardPattern) = do
   tv <- fresh
   return (tv, A.PWildcard, M.empty)
 inferPattern (C.Located pos (P.ConstructorPattern (D.Simple name) pats)) = do
@@ -262,7 +262,7 @@ inferToplevel (C.Located pos (C.Function (C.Annoted name ret) generics' args exp
     _ -> E.throwError ("Invalid generic", Nothing, pos)) $ M.elems generics''
 
   let funTy = map snd argsTypes :-> ret'
-  let args' = (name, Forall gens funTy) : map (\(n, t) -> (n, Forall gens t)) argsTypes
+  let args' = (name, Forall gens funTy) : map (BF.second (Forall gens)) argsTypes
 
   (t, e') <- withGenerics generics'' $ withVariables args' $ inferExpression expr
   unify (t :~: ret', pos)
@@ -271,10 +271,15 @@ inferToplevel (C.Located pos (C.Function (C.Annoted name ret) generics' args exp
   s <- solve csts
   ST.modify $ \s' -> s' { constraints = [] }
 
-  let scheme = Forall gens $ apply s funTy
+  env <- ask
+
+  let scheme = if null gens 
+        then generalize env (apply s funTy)
+        else Forall gens $ apply s funTy
+
   ST.modify $ \s' -> s' { variables = M.insert name scheme (variables s') }
   ST.modify $ \s' -> s' { returnType = Void }
-  return (Void, apply s $ [A.Function name (map (uncurry C.Annoted) argsTypes) ret' e'])
+  return (Void, apply s [A.Function name (map (uncurry C.Annoted) argsTypes) ret' e'])
 inferToplevel (C.Located _ (C.Public tl)) = inferToplevel tl
 inferToplevel (C.Located pos (C.Declare name gens args ret)) = do
   generics' <- mapM (const fresh) gens
@@ -299,14 +304,14 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
   let header = if null generics'' then TId name else TApp (TId name) generics''
 
   constructors' <- mapM (\(C.Annoted name' args) -> do
-    args' <- mapM (flip toWithEnv env) args
+    args' <- mapM (`toWithEnv` env) args
     return (name', args' :-> header)) constructors
 
   gens <- mapM (\case
     TVar i -> return i
     _ -> E.throwError ("Invalid generic", Nothing, pos)) generics''
 
-  let schemes = M.fromList $ map (\(n, t) -> (n, Forall gens t)) constructors'
+  let schemes = M.fromList $ map (BF.second (Forall gens)) constructors'
   ST.modify $ \s -> s { types = M.union schemes (types s) }
 
   -- Building structures types for each constructor
@@ -317,8 +322,8 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
     args :-> ret -> do
       let args' = zipWith (\t' i -> C.Annoted ("a" ++ show i) t') args [(0 :: Integer)..]
       let variables' = zipWith (\t' i -> A.Variable ("a" ++ show i) t') args [(0 :: Integer)..]
-      let fields = zipWith (\_ i ->("a" ++ show i)) args [(0 :: Integer)..]
-      return $ A.Function n args' ret (A.Return $ A.Structure $ (zip fields variables') ++ [("type", A.Literal (C.String n)), ("$$enum", A.Literal (C.Bool True))])
+      let fields = zipWith (\_ i -> "a" ++ show i) args [(0 :: Integer)..]
+      return $ A.Function n args' ret (A.Return $ A.Structure $ zip fields variables' ++ [("type", A.Literal (C.String n)), ("$$enum", A.Literal (C.Bool True))])
     _ -> E.throwError ("Invalid constructor of enumeration", Nothing, pos)) constructors'
 
   return (Void, structures)
@@ -339,7 +344,8 @@ inferToplevel (C.Located pos (C.Declaration (name C.:@ ty) expr)) = do
   (t', e') <- withVariable (name, Forall [] tv) $ inferExpression expr
 
   unify (tv :~: t', pos)
-  let scheme = Forall [] tv
+  env <- ask
+  let scheme = generalize env tv
   ST.modify $ \s' -> s' { variables = M.insert name scheme (variables s') }
   return (Void, [A.Declaration name  tv e'])
 inferToplevel (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
@@ -361,6 +367,6 @@ functions = M.fromList [
     ("*", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1),
     ("/", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1),
     ("-", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1),
-    ("()", Forall [] $ Void),
+    ("()", Forall [] Void),
     ("+", Forall [1] $ [TVar 1, TVar 1] :-> TVar 1)
   ]
