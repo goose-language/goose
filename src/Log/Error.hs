@@ -6,17 +6,19 @@ module Log.Error where
   import Error.Diagnose               ( addFile, printDiagnostic, stderr, defaultStyle, Position (Position), Marker (This), def, stdout, addReport, Report(Err), Note (Note) )
   import Data.Void                    ( Void )
   import Text.Parsec                  ( SourcePos, sourceColumn, sourceLine, sourceName, ParseError )
-  import Data.Maybe                   ( maybeToList )
+  import Data.Maybe                   ( maybeToList, fromJust )
+  import System.Directory (doesFileExist)
   
   instance HasHints Void String where
     hints _ = mempty
 
-  printError :: (String, Maybe String, (SourcePos, SourcePos)) -> String -> IO ()
-  printError (error', msg, (p1, p2)) step = do
+  printError :: Maybe String -> (String, Maybe String, (SourcePos, SourcePos)) -> String -> IO ()
+  printError content (error', msg, (p1, p2)) step = do
     let p1' = (sourceLine p1, sourceColumn p1)
     let p2' = (sourceLine p2, sourceColumn p2)
     let file' = sourceName p1
-    x' <- readFile file'
+    b <- doesFileExist file'
+    x' <- if b then readFile file' else return $ fromJust content
     let pos' = Position p1' p2' $ sourceName p1
     let beautifulExample = Err
           Nothing
