@@ -12,6 +12,10 @@ import Language.Goose.LLVM.BuildLibrary (buildExecutable)
 import Data.List
 
 import qualified Log.Error as L
+import Data.Functor
+import Language.Goose.Transformation.ANF.AST (ANFDefinition)
+import Language.Goose.CST.Located (Located)
+import Language.Goose.CST.Expression (Toplevel)
 
 compileFromString :: String -> FilePath -> [String] -> [String] -> String -> IO ()
 compileFromString input filename libraries flags output = do
@@ -21,18 +25,38 @@ compileFromString input filename libraries flags output = do
     Right ast' -> do
       ast <- runModuleResolver filename ast'
       case ast of
-        Left err -> L.printError (fst err, Nothing, snd err) "Module resolution"
+        Left err -> L.printError Nothing (fst err, Nothing, snd err) "Module resolution"
         Right ast' -> do
           ast <- runModuleBundling $ nub ast'
           case ast of
-            Left err -> L.printError (fst err, Nothing, snd err) "Module bundling"
+            Left err -> L.printError Nothing (fst err, Nothing, snd err) "Module bundling"
             Right ast' -> do
               ast <- performInfer $ nub ast'
               case ast of
-                Left err -> L.printError err "Type inference"
+                Left err -> L.printError Nothing err "Type inference"
                 Right ast' -> do
                   ast <- return $ runEtaExpansion ast'
                   ast <- runANF ast
                   ast <- return $ runClosureConversion ast
                   ast <- return $ addInitFunction ast
                   buildExecutable ast libraries flags output
+
+getANFDefinitions :: String -> [Located Toplevel] -> String -> IO (Maybe [ANFDefinition])
+getANFDefinitions content ast' filename = do
+  ast <- runModuleResolver filename ast'
+  case ast of
+    Left err -> L.printError (Just content) (fst err, Nothing, snd err) "Module resolution" $> Nothing
+    Right ast' -> do
+      ast <- runModuleBundling $ nub ast'
+      case ast of
+        Left err -> L.printError (Just content) (fst err, Nothing, snd err) "Module bundling" $> Nothing
+        Right ast' -> do
+          ast <- performInfer $ nub ast'
+          case ast of
+            Left err -> L.printError (Just content) err "Type inference" $> Nothing
+            Right ast' -> do
+              ast <- return $ runEtaExpansion ast'
+              ast <- runANF ast
+              ast <- return $ runClosureConversion ast
+              return . Just $ addInitFunction ast
+                
