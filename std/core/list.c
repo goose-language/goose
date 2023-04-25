@@ -6,8 +6,8 @@
 #include "conversion.h"
 #include "type.h"
 #include "error.h"
-#include "garbage/tgc.h"
-#include "garbage.h"
+
+
 #include "io.h"
 
 int length(VALUE list) {

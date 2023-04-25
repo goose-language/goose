@@ -1,7 +1,7 @@
 #ifndef IO_H
 #define IO_H
 
-#include "value/nanbox.h"
+
 #include "value.h"
 
 VALUE IO_print(VALUE args);

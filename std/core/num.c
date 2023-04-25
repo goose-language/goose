@@ -5,8 +5,8 @@
 #include "type.h"
 #include "conversion.h"
 #include "eq.h"
-#include "garbage.h"
-#include "garbage/tgc.h"
+
+
 
 VALUE add(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);

@@ -2,9 +2,9 @@
 #include <stdlib.h>
 #include "value.h"
 #include <string.h>
-#include "garbage/tgc.h"
+
 #include "conversion.h"
-#include "garbage.h"
+
 #include "io.h"
 #include <stdarg.h>
 

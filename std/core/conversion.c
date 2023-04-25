@@ -2,12 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "conversion.h"
-#include "garbage/tgc.h"
-#include "garbage.h"
 #include "value.h"
 #include "list.h"
 #include "io.h"
-#include "value/nanbox.h"
 
 HeapValue* decode_pointer(VALUE value) {
   return (HeapValue*)(value & MASK_PAYLOAD_PTR);
