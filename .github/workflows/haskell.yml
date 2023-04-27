@@ -88,7 +88,7 @@ jobs:
       - name: Setup LLVM using Chocolatey
         uses: crazy-max/ghaction-chocolatey@v2.1.0
         with:
-          args: install llvm --version=12.0.0
+          args: install llvm --version=12.0.0 --allow-downgrade --force --yes
       - uses: haskell/actions/setup@v2
         with:
           ghc-version: '8.10.7'
