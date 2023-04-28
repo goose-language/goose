@@ -104,8 +104,6 @@ library
 
         Language.Goose.Transformation.EtaExpansion
         Language.Goose.Transformation.DeclarationRemover
-        Language.Goose.Transformation.AlphaConversion
-        Language.Goose.Transformation.BlockRemover
 
         Language.Goose.CLang.Compiler
             Language.Goose.CLang.Definition.IR
