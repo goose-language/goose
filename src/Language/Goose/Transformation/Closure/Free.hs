@@ -34,8 +34,6 @@ instance Free ANFExpression where
   free (EUpdate x e) = free x `S.union` free e
   free (EBinary _ l r) = free l `S.union` free r
   free (EUnary _ e) = free e
-  free (EMutable e) = free e
-  free (EDereference e) = free e
 
 instance Free ANFStatement where
   free (SLet x e) = free e S.\\ S.singleton x

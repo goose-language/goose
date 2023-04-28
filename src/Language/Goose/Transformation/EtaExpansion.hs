@@ -73,8 +73,6 @@ etaExpandExpr (Binary op e1 e2) = Binary op <$> local (etaExpandExpr e1) <*> loc
 etaExpandExpr (Structure fields) = Structure <$> local (mapM (mapM etaExpandExpr) fields)
 etaExpandExpr (StructureAccess e name) = StructureAccess <$> local (etaExpandExpr e) <*> return name
 etaExpandExpr (Update u e) = Update u <$> local (etaExpandExpr e)
-etaExpandExpr (Mutable e) = Mutable <$> local (etaExpandExpr e)
-etaExpandExpr (Dereference e) = Dereference <$> local (etaExpandExpr e)
 etaExpandExpr _ = error "Not implemented"
 
 etaExpandTL :: MonadEta m => Toplevel -> m Toplevel

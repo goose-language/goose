@@ -89,8 +89,6 @@ substExpr (EUnary op e) name expr = EUnary op (substExpr e name expr)
 substExpr (EList exprs) name expr = EList $ map (\e -> substExpr e name expr) exprs
 substExpr (EListAccess e1 e2) name expr = EListAccess (substExpr e1 name expr) (substExpr e2 name expr)
 substExpr (EUpdate e1 e2) name expr = EUpdate (substExpr e1 name expr) (substExpr e2 name expr)
-substExpr (EMutable e) name expr = EMutable $ substExpr e name expr
-substExpr (EDereference e) name expr = EDereference $ substExpr e name expr
 
 subst :: ANFStatement -> String -> ANFExpression -> ANFStatement
 subst (SExpression e) name expr = SExpression $ substExpr e name expr
@@ -230,12 +228,6 @@ convertExpression (EUnary op e) = do
 convertExpression (EUpdate updated e) = do
   (e', stmts) <- convertExpression e
   return (EUpdate updated e', stmts)
-convertExpression (EMutable e) = do
-  (e', stmts) <- convertExpression e
-  return (EMutable e', stmts)
-convertExpression (EDereference e) = do
-  (e', stmts) <- convertExpression e
-  return (EDereference e', stmts)
 
 fst3 :: (a, b, c) -> a
 fst3 (a, _, _) = a

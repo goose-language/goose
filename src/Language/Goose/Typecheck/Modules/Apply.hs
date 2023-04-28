@@ -121,8 +121,6 @@ instance Types Expression where
   apply s (Binary op e1 e2) = Binary op (apply s e1) $ apply s e2
   apply s (Structure fields) = Structure $ apply s fields
   apply s (StructureAccess e f) = StructureAccess (apply s e) f
-  apply s (Mutable e) = Mutable $ apply s e
-  apply s (Dereference e) = Dereference $ apply s e
 
 instance Types Updated where
   free _ = undefined

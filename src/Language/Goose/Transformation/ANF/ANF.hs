@@ -162,12 +162,6 @@ anfExpr (T.While cond body) = do
   (lets, cond) <- anfExpr cond
   (lets', body) <- unzip <$> mapM anfStmt body
   return $ ([], embed $ createLet lets ++ [A.SWhile cond (createLet (concat lets') ++ concat body)])
-anfExpr (T.Mutable e) = do
-  (lets, e) <- anfExpr e
-  return $ (lets, A.EMutable e)
-anfExpr (T.Dereference e) = do
-  (lets, e) <- anfExpr e
-  return $ (lets, A.EDereference e)
 
 
 anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFExpression)

@@ -30,7 +30,6 @@ parseExpression :: Monad m => L.Goose m C.Expression
 parseExpression = E.buildExpressionParser table parseTerm
   where table = [
             [ E.Postfix $ makeUnaryOp postfix ],
-            [ E.Prefix $ makeUnaryOp deref ],
             equalities,
             logicalP,
             [ E.Infix (L.reservedOp "*" >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary "*" x y C.:>: (s, e))) E.AssocLeft,
@@ -53,11 +52,6 @@ parseExpression = E.buildExpressionParser table parseTerm
           s <- P.getPosition
           return $ \x@(C.Located (pos, _) _) -> C.ListAccess x i C.:>: (pos, s)
 
-        deref = do
-          L.reservedOp "*"
-          s <- P.getPosition
-          return $ \x@(C.Located (pos, _) _) -> C.Dereference x C.:>: (pos, s)
-
         logicalOp = ["&&", "||"]
         logicalP = map (\op -> E.Infix (L.reservedOp op >> return (\x@(C.Located (s, _) _) y@(C.Located (_, e) _) -> C.Binary op x y C.:>: (s, e))) E.AssocLeft) logicalOp
         equalityOp = ["==", "!=", "<", ">", "<=", ">="]
@@ -65,11 +59,10 @@ parseExpression = E.buildExpressionParser table parseTerm
 
 parseTerm :: Monad m => L.Goose m C.Expression
 parseTerm = P.choice [
+    parseUpdate,
     P.try parseFunction,
     L.parens parseExpression,
-    parseMutable,
     parseObject,
-    parseUpdate,
     parseMatch,
     parseLiteral,
     parseVariable,
@@ -81,11 +74,6 @@ parseTerm = P.choice [
     parseSequence,
     parseReturn
   ]
-
-parseMutable :: Monad m => L.Goose m C.Expression
-parseMutable = L.locate $ do
-  L.reserved "mutable"
-  C.Mutable <$> parseExpression
 
 parseLiteral :: Monad m => L.Goose m C.Expression
 parseLiteral = P.choice [

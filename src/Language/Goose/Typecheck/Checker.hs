@@ -162,14 +162,6 @@ inferExpression (C.Located pos (C.Lambda args ret body)) = do
   unify (t :~: tv, pos)
   ST.modify $ \s' -> s' { returnType = ret' }
   return (map snd tvs :-> tv, A.Lambda (map (uncurry C.Annoted) tvs) e')
-inferExpression (C.Located _ (C.Mutable expr)) = do
-  (t, e') <- local' $ inferExpression expr
-  return (Mutable t, A.Mutable e')
-inferExpression (C.Located pos (C.Dereference expr)) = do
-  tv <- fresh
-  (t, e') <- local' $ inferExpression expr
-  unify (t :~: Mutable tv, pos)
-  return (tv, A.Dereference e')
 inferExpression (C.Located pos (C.Match expr cases)) = do
   (t, e') <- local' $ inferExpression expr
   (tys, cases') <- L.unzip <$> local' (CM.forM cases (\(pat, expr') -> do

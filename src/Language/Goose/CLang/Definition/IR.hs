@@ -41,7 +41,6 @@ data IRExpression
   | IRTernary IRExpression IRExpression IRExpression
   | IREUpdate IRExpression IRExpression
   | IRDict [(String, IRExpression)]
-  | IRReference IRExpression
   | IRDictAccess IRExpression String
   | IRIn IRExpression String
   deriving (Eq, Show)

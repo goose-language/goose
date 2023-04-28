@@ -266,12 +266,6 @@ resolveImportedExpressions (Match expr cases :>: pos) = do
     expr' <- resolveImportedExpressions expr
     return (pattern', expr')) cases
   return $ Match expr' cases' :>: pos
-resolveImportedExpressions (Mutable expr :>: pos) = do
-  expr' <- resolveImportedExpressions expr
-  return $ Mutable expr' :>: pos
-resolveImportedExpressions (Dereference expr :>: pos) = do
-  expr' <- resolveImportedExpressions expr
-  return $ Dereference expr' :>: pos
 resolveImportedExpressions (Located pos _) = E.throwError ("Not implemented", pos)
 
 resolveImportedPattern :: MonadBundling m => Pattern -> m Pattern

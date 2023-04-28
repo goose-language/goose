@@ -44,5 +44,3 @@ removeExpr (EList exprs) = EList (map removeExpr exprs)
 removeExpr (EListAccess list index) = EListAccess (removeExpr list) (removeExpr index)
 removeExpr (EStructure fields) = EStructure (map (BF.second removeExpr) fields)
 removeExpr (EStructAccess struct field) = EStructAccess (removeExpr struct) field
-removeExpr (EMutable expr) = EMutable (removeExpr expr)
-removeExpr (EDereference expr) = EDereference (removeExpr expr)

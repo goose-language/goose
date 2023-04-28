@@ -168,7 +168,6 @@ instance Generation IRExpression where
   generate (IRDictAccess e1 e2) = do
     e1' <- generate e1
     return $ "property_(" ++ e1' ++ ", " ++ show e2 ++ ")"
-  generate (IRReference e) = ("&" ++) <$> generate e
   generate (IRIn e1 s) = do
     e1' <- generate e1
     s' <- generate (IRLiteral (String s))

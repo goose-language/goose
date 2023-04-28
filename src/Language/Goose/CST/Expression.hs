@@ -142,14 +142,6 @@ data Expression
   -- | A return expression
   -- | Of the form: return e
   | Return (Located Expression)
-
-  -- | A mutable expression
-  -- | Of the form: mutable e
-  | Mutable (Located Expression)
-
-  -- | A dereference expression
-  -- | Of the form: *e
-  | Dereference (Located Expression)
   deriving Eq
 
 data Updated
@@ -187,8 +179,6 @@ instance Show Expression where
   show (Structure fields) = "{" ++ intercalate ", " (map (\(name, expression) -> name ++ " = " ++ show expression) fields) ++ "}"
   show (StructureAccess structure field) = show structure ++ "." ++ field
   show (Lambda args ret body) = "fun(" ++ intercalate ", " (map show args) ++ "): " ++ show ret ++ "do " ++ show body ++ " end"
-  show (Mutable expression) = "mutable " ++ show expression
-  show (Dereference expression) = "*" ++ show expression
 
 instance Show Updated where
   show (VariableUpdate name) = show name

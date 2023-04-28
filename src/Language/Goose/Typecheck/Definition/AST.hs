@@ -95,14 +95,6 @@ data Expression
   -- | A structure access expression
   -- | Of the form: e.x
   | StructureAccess Expression Name
-
-  -- | A mutable expression
-  -- | Of the form: mutable e
-  | Mutable Expression
-
-  -- | A dereference expression
-  -- | Of the form: *e
-  | Dereference Expression
   deriving Eq
 
 data Updated
@@ -151,8 +143,6 @@ instance Show Expression where
   show (Binary op e1 e2) = show e1 ++ " " ++ op ++ " " ++ show e2
   show (Structure xs) = "{" ++ unwords (map (\(x, e) -> x ++ " = " ++ show e) xs) ++ "}"
   show (StructureAccess e x) = show e ++ "." ++ x
-  show (Mutable e) = "mutable " ++ show e
-  show (Dereference e) = "*" ++ show e
   show _ = "?"
 
 instance Show Updated where

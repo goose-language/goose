@@ -18,8 +18,6 @@ data ANFExpression
   | EUpdate ANFExpression ANFExpression
   | EStructure [(String, ANFExpression)]
   | EStructAccess ANFExpression String
-  | EMutable ANFExpression
-  | EDereference ANFExpression
   deriving Eq
 
 instance Show ANFExpression where
@@ -35,8 +33,6 @@ instance Show ANFExpression where
   show (EUpdate updated expr) = show updated ++ " = " ++ show expr
   show (EStructure fields) = "{" ++ intercalate ", " (map (\(n, e) -> n ++ ": " ++ show e) fields) ++ "}"
   show (EStructAccess struct field) = show struct ++ "." ++ field
-  show (EMutable expr) = "mutable " ++ show expr
-  show (EDereference expr) = "*" ++ show expr
 
 data ANFStatement
   = SLet String ANFExpression
