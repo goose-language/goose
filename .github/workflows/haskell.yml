@@ -85,10 +85,10 @@ jobs:
       - uses: actions/checkout@master
         with:
           submodules: true
-      - name: Setup LLVM using Chocolatey
-        uses: crazy-max/ghaction-chocolatey@v2.1.0
+      - name: Setup Windows
+        uses: llvm/actions/setup-windows@main
         with:
-          args: install llvm --version=12.0.0 --allow-downgrade --force --yes
+          arch: amd64
       - uses: haskell/actions/setup@v2
         with:
           ghc-version: '8.10.7'
