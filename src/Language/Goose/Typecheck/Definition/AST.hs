@@ -10,17 +10,17 @@ type Name = String
 data Toplevel
   -- | A toplevel function declaration 
   -- | Of the form: fun functionName[generics](args): returnType = body
-  = Function { 
-      functionName :: Name, 
-      functionArgs :: [Annoted Type], 
-      functionReturn :: Type, 
+  = Function {
+      functionName :: Name,
+      functionArgs :: [Annoted Type],
+      functionReturn :: Type,
       functionBody :: Expression }
 
   -- | A toplevel declaration
   -- | Of the form: let x: t = e
-  | Declaration { 
-      declarationName :: Name, 
-      declarationType :: Type, 
+  | Declaration {
+      declarationName :: Name,
+      declarationType :: Type,
       declarationBody :: Expression }
 
   | Declare [Type] (Annoted Type)
@@ -32,21 +32,21 @@ data Expression
 
   -- | An expression application, used to represent a function applied to an argument
   -- | Of the form: f(x₀, x₁, ..., xₙ)
-  | Application (Expression) [Expression]
+  | Application Expression [Expression]
 
   -- | A lambda abstraction, used to represent a function that takes arguments
   -- | Of the form: fun(x₀: t₀, x₁: t₁, ..., xₙ: tₙ) e
-  | Lambda { 
+  | Lambda {
       lambdaArgs :: [Annoted Type],
       lambdaBody :: Expression }
 
   -- | A let expression, used to represent a local binding
   -- | Of the form: let x: t = e₁ in e₂
-  | Let (Annoted Type) (Expression) (Expression)
-  
+  | Let (Annoted Type) Expression Expression
+
   -- | A pattern match expression, used to represent a case expression
   -- | Of the form: match e { p₀ = e₀, p₁ = e₁, ..., pₙ = eₙ }
-  | Match (Expression) [(Pattern, Expression)]
+  | Match Expression [(Pattern, Expression)]
 
   -- | A statement sequence
   -- | Of the form: { e₀; e₁; ...; eₙ }
@@ -58,11 +58,11 @@ data Expression
 
   -- | An index expression, used to represent an index into a list
   -- | Of the form: e₀[e₁]
-  | ListAccess (Expression) (Expression)
+  | ListAccess Expression Expression
 
   -- | A while loop expression
   -- | Of the form: while e₁ e₂
-  | While (Expression) [Expression]
+  | While Expression [Expression]
 
   -- | A for loop expression
   -- | Of the form: for x: t = e₁ to e₂ e₃
@@ -70,15 +70,15 @@ data Expression
       forVariable :: Annoted Type,
       forIn :: Expression,
       forBody :: [Expression] }
-  
+
   -- | A conditional expression
   -- | Of the form: if e₁ then e₂ else e₃
   -- | Or of the form: e₁ ? e₂ : e₃
-  | If (Expression) Expression (Maybe Expression)
+  | If Expression Expression (Maybe Expression)
 
   -- | A variable update expression
   -- | Of the form: x = e
-  | Update Updated (Expression)
+  | Update Updated Expression
 
   -- | A return expression
   -- | Of the form: return e
@@ -149,4 +149,3 @@ instance Show Updated where
   show (VariableUpdate x _) = x
   show (ListUpdate x y) = show x ++ "[" ++ show y ++ "]"
   show (StructureUpdate x y) = show x ++ "." ++ y
-  

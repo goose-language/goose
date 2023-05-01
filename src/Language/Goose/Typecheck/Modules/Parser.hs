@@ -1,6 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE LambdaCase #-}
+
+
 module Language.Goose.Typecheck.Modules.Parser where
 import qualified Language.Goose.Typecheck.Definition.Type as T
 import qualified Language.Goose.CST.Modules.Declaration as D
@@ -29,7 +29,7 @@ instance Parser D.Declaration where
             return (T.Mutable t)
           go (D.Constructor (D.ID (D.Simple v)) xs) env = do
             aliases <- ST.gets T.aliases
-            xs' <- mapM (flip go env) xs
+            xs' <- mapM (`go` env) xs
             case M.lookup v aliases of
               Just (T.Forall gens t) -> do
                 let env' = M.fromList (zip gens xs')
@@ -37,24 +37,22 @@ instance Parser D.Declaration where
               Nothing -> return (T.TApp (T.TId v) xs')
           go (D.Constructor v xs) env = do
             t <- go v env
-            ts <- mapM (flip go env) xs
-            
+            ts <- mapM (`go` env) xs
+
             return (T.TApp t ts)
-          go (D.Generic v) env = case M.lookup v env of
-            Just t -> return t
-            Nothing -> T.fresh
+          go (D.Generic v) env = maybe T.fresh return (M.lookup v env)
           go (D.ID (D.Simple v)) _ = do
             aliases <- ST.gets T.aliases
             case M.lookup v aliases of
               Just (T.Forall _ t) -> return t
               Nothing -> return (T.TId v)
-          go D.Int _ = return (T.Int)
-          go D.Bool _ = return (T.Bool)
-          go D.Float _ = return (T.Float)
-          go D.Char _ = return (T.Char)
-          go D.Unit _ = return (T.Void)
+          go D.Int _ = return T.Int
+          go D.Bool _ = return T.Bool
+          go D.Float _ = return T.Float
+          go D.Char _ = return T.Char
+          go D.Unit _ = return T.Void
           go (D.Function args ret) env = do
-            ts <- mapM (flip go env) args
+            ts <- mapM (`go` env) args
             t <- go ret env
             return $ ts T.:-> t
           go (D.List v) env = T.TApp (T.TId "List") . (:[]) <$> go v env

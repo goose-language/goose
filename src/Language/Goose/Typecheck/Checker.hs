@@ -188,6 +188,18 @@ inferUpdate (C.Located pos (C.VariableUpdate (D.Simple name))) = do
       tv <- fresh
       t <- instantiate scheme
       return (tv, A.VariableUpdate name t)
+inferUpdate (C.Located pos (C.StructureUpdate struct field)) = do
+  tv <- fresh
+  (t, e') <- local' $ inferUpdate struct
+  unify (Field field tv t, pos)
+  return (tv, A.StructureUpdate e' field)
+inferUpdate (C.Located pos (C.ListUpdate list index)) = do
+  tv <- fresh
+  (t, e') <- local' $ inferUpdate list
+  unify (t :~: TList tv, pos)
+  (t', e'') <- local' $ inferExpression index
+  unify (t' :~: Int, pos)
+  return (tv, A.ListUpdate e' e'')
 inferUpdate (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 inferPattern :: MonadChecker m => C.Located P.Pattern -> m (Type, A.Pattern, M.Map String Scheme)
