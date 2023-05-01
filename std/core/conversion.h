@@ -19,4 +19,7 @@ char* decode_string(VALUE value);
 HeapValue* decode_pointer(VALUE value);
 result decode_lambda(VALUE value);
 
+void update_index(VALUE array, int index, VALUE value);
+void update_property(VALUE dict, char* key, VALUE value);
+
 #endif
