@@ -17,8 +17,8 @@ import Language.Goose.Transformation.ANF.AST (ANFDefinition)
 import Language.Goose.CST.Located (Located)
 import Language.Goose.CST.Expression (Toplevel)
 
-compileFromString :: String -> FilePath -> [String] -> [String] -> String -> IO ()
-compileFromString input filename libraries flags output = do
+compileFromString :: String -> FilePath -> [String] -> [String] -> String -> String -> IO ()
+compileFromString input filename libraries flags output target = do
   ast <- parseGoose filename input
   case ast of
     Left err -> L.printParseError err filename input
@@ -39,7 +39,7 @@ compileFromString input filename libraries flags output = do
                   ast <- runANF ast
                   ast <- return $ runClosureConversion ast
                   ast <- return $ addInitFunction ast
-                  buildExecutable ast libraries flags output
+                  buildExecutable ast libraries flags output target
 
 getANFDefinitions :: String -> [Located Toplevel] -> String -> IO (Maybe [ANFDefinition])
 getANFDefinitions content ast' filename = do

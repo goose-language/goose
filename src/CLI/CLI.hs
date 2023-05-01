@@ -16,7 +16,8 @@ data CLI =
       { input     :: String
       , libraries :: [String]
       , flags     :: [String]
-      , output    :: String}
+      , output    :: String
+      , target    :: String }
   | Run
       { input     :: String
       , libraries :: [String]
@@ -34,12 +35,12 @@ runCLI :: IO ()
 runCLI = do
   cli' <- customExecParser p opts
   case cli' of
-    Compile input' libraries' flags' output' -> do
+    Compile input' libraries' flags' output' target' -> do
       exists <- doesFileExist input'
       if exists
         then do
           content <- readFile input'
-          compileFromString content input' libraries' flags' output'
+          compileFromString content input' libraries' flags' output' target'
         else putStrLn "File does not exist" *> exitFailure
     Run input' libraries' flags' -> do
       x <- doesFileExist input'
@@ -70,12 +71,26 @@ cli = subparser
  <> command "run" (info runner (progDesc "Run a file"))
  <> command "repl" (info repl (progDesc "Run the REPL")) )
 
+-- arm-none-eabi
+-- armv7a-none-eabi
+-- arm-linux-gnueabihf 
+-- arm-none-linux-gnueabi
+-- i386-pc-linux-gnu 
+-- x86_64-apple-darwin10
+-- i686-w64-windows-gnu # same as i686-w64-mingw32
+-- x86_64-pc-linux-gnu # from ubuntu 64 bit
+-- x86_64-unknown-windows-cygnus # cygwin 64-bit
+-- x86_64-w64-windows-gnu # same as x86_64-w64-mingw32
+-- i686-pc-windows-gnu # MSVC
+-- x86_64-pc-windows-gnu # MSVC 64-BIT
+
 compiler :: Parser CLI
 compiler = Compile
   <$> argument str (metavar "INPUT")
   <*> many (strOption (long "includes" <> short 'i' <> metavar "LIBRARIES" <> help "Libraries to link"))
   <*> many (strOption (long "libraries" <> short 'l' <> metavar "LINK LIBRARIES" <> help "Libraries when linking"))
   <*> strOption (long "output" <> short 'o' <> metavar "OUTPUT" <> help "Output file" <> if os == "mingw32" then value "a.exe" else value "a.out")
+  <*> strOption (long "target" <> metavar "TARGET OS" <> help "Cross compile to a different OS" <> if os == "mingw32" then value "x86_64-w64-windows-gnu" else if os == "darwin" then value "x86_64-apple-darwin10" else value "i386-pc-linux-gnu ")
 
 runner :: Parser CLI
 runner = Run
