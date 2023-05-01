@@ -50,7 +50,7 @@ instance Generation IRToplevel where
     return $ "struct " ++ varify name ++ " { " ++ unwords fields' ++ " };"
   generate (IRDeclare name args ret) = case args of
     Nothing -> return $ ret ++ " " ++ varify name ++ ";"
-    Just args -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args ++ ");"
+    Just args' -> return $ ret ++ " " ++ varify name ++ "(" ++ intercalate ", " args' ++ ");"
   generate (IRGlobalString name str) = return $ "const char*" ++ varify name ++ " = " ++ show str ++ ";"
 
 instance Generation IRStructField where

@@ -3,8 +3,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TupleSections #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# HLINT ignore "Use camelCase" #-}
 module Language.Goose.LLVM.Compiler where
 import Data.String
 import qualified LLVM.AST.Constant as C
@@ -70,6 +68,11 @@ valuesTy = M.fromList [
 
     -- Value access functions
     ("decode_lambda", AST.FunctionType funTy [AST.i64] False),
+    ("decode_integer", AST.FunctionType AST.i64 [AST.i64] False),
+    ("decode_character", AST.FunctionType AST.i8 [AST.i64] False),
+    ("decode_unit", AST.FunctionType AST.i64 [AST.i64] False),
+    ("decode_floating", AST.FunctionType AST.float [AST.i64] False),
+    ("decode_string", AST.FunctionType (AST.ptr AST.i8) [AST.i64] False),
     ("decode_boolean", AST.FunctionType AST.i1 [AST.i64] False),
     ("index_", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
     ("property_", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
@@ -87,7 +90,11 @@ valuesTy = M.fromList [
     ("divide", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
 
     ("length", AST.FunctionType AST.i64 [AST.i64] False),
-    ("in", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False)
+    ("in", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
+
+    -- Update functions
+    ("update_index", AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False),
+    ("update_property", AST.FunctionType AST.void [AST.i64, AST.ptr AST.i8, AST.i64] False)
   ]
 
 funTy :: AST.Type
@@ -248,7 +255,20 @@ convertStatement (IR.IRUpdate (IR.IRVariable name) expr) = do
   expr' <- convertExpression expr
   i <- ST.gets $ M.findWithDefault (error $ "Variable " ++ name ++ " not found") name . fst
   IRB.store i 0 expr'
-convertStatement _ = error "Not implemented"
+convertStatement (IR.IRUpdate (IR.IRListAccess lst idx) expr) = do
+  expr' <- convertExpression expr
+  lst' <- convertExpression lst
+  idx' <- convertExpression idx
+  integered <- IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64] False) (AST.Name $ fromString "decode_integer")) [(idx', [])]
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False) (AST.Name $ fromString "update_index")) [(lst', []), (integered, []), (expr', [])]
+  return ()
+convertStatement (IR.IRUpdate (IR.IRDictAccess dict key) expr) = do
+  expr' <- convertExpression expr
+  dict' <- convertExpression dict
+  key' <- string key
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.void [AST.i64, AST.ptr AST.i8, AST.i64] False) (AST.Name $ fromString "update_property")) [(dict', []), (key', []), (expr', [])]
+  return ()
+convertStatement x = error $ "Not implemented: " ++ show x
 
 convertExpression :: LLVM m => IR.IRExpression -> m AST.Operand
 convertExpression (IR.IRLiteral l) = case l of
@@ -313,6 +333,17 @@ convertExpression (IR.IREUpdate (IR.IRVariable name) expr) = do
   IRB.store expr' 0 update
   ST.modify . BF.first $ M.insert name update
   return $ ConstantOperand $ C.Int 64 0
+convertExpression (IR.IREUpdate (IR.IRListAccess lst idx) expr) = do
+  expr' <- convertExpression expr
+  lst' <- convertExpression lst
+  idx' <- convertExpression idx
+  integered <- IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64] False) (AST.Name $ fromString "decode_integer")) [(idx', [])]
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False) (AST.Name $ fromString "update_index")) [(lst', []), (integered, []), (expr', [])]
+convertExpression (IR.IREUpdate (IR.IRDictAccess dict key) expr) = do
+  expr' <- convertExpression expr
+  dict' <- convertExpression dict
+  key' <- string key
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.void [AST.i64, AST.ptr AST.i8, AST.i64] False) (AST.Name $ fromString "update_property")) [(dict', []), (key', []), (expr', [])]
 convertExpression (IR.IRDict fields) = do
   fields' <- mapM (\(k, v) -> (,) <$> string k <*> convertExpression v) fields
   let fields'' = concat [ [k, v] | (k, v) <- fields' ]

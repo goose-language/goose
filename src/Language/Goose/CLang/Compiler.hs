@@ -78,8 +78,7 @@ compileExpression (ELambda _ _) = error "Not implemented"
 compileExpression (EUpdate u e) = IREUpdate (compileExpression u) (compileExpression e)
 compileExpression (EStructure fields) = IRDict (map (second compileExpression) fields)
 compileExpression (EStructAccess dict "$$fun") = IRApplication (IRVariable "decode_lambda") [compileExpression dict]
-compileExpression (EStructAccess e1 e2) =
-  IRApplication (IRVariable "property_") [compileExpression e1, IRLiteral $ L.String e2]
+compileExpression (EStructAccess e1 e2) = IRDictAccess (compileExpression e1) e2
 
 generateDeclarations :: [String] -> [IRToplevel]
 generateDeclarations = map (\x -> IRDeclare x (Just [rttiName]) rttiName)

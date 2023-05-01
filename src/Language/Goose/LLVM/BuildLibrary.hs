@@ -13,20 +13,20 @@ import System.Directory (setCurrentDirectory, getCurrentDirectory)
 import qualified GHC.IO.Exception as IO
 import Data.Functor
 
-buildExecutable :: [ANFDefinition] -> [String] -> [String] -> String -> IO ()
-buildExecutable ast libs flags output = do
+buildExecutable :: [ANFDefinition] -> [String] -> [String] -> String -> String -> IO ()
+buildExecutable ast libs flags output target = do
   let libraries = CL.includeLibrary
   IO.findExecutable "clang" >>= \case
     Just command -> do
       current <- getCurrentDirectory
       withTempDirectory current "build" $ \dir -> (do
         setCurrentDirectory dir
-        IO.callProcess command $ libraries ++ map (current </>) libs ++ ["-c", "-w", "-lcurl"] ++ map ("-l"++) flags
+        IO.callProcess command $ libraries ++ map (current </>) libs ++ ["-c", "-w", "-lcurl", "-target", target] ++ map ("-l"++) flags
         x <- LLVM.runCompiler (compile ast)
         writeFile (dir </> "main.ll") x
-        IO.callProcess "llc" [dir </> "main.ll", "-filetype=obj", "-o", dir </> "main.o"]
+        IO.callProcess "llc" [dir </> "main.ll", "-o", dir </> "main.o", "-mtriple=" ++ target, "-filetype=obj"]
         setCurrentDirectory current
-        IO.callCommand . unwords $ [command, dir </> "*.o", "-o", output, "-w", "-lcurl"] ++ map ("-l"++) flags)
+        IO.callCommand . unwords $ [command, dir </> "*.o", "-o", output, "-w", "-lcurl", "-target", target] ++ map ("-l"++) flags)
     Nothing -> putStrLn "No CLang compiler LLVM found!"
 
 buildAndRun :: [ANFDefinition] -> [String] -> [String] -> IO (Maybe String)
