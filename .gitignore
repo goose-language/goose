@@ -1,5 +1,5 @@
-a.out.*
-a.out
+*.out.*
+*.out
 *.prof
 main.c
 *.html
@@ -7,3 +7,5 @@ main.c
 dist-newstyle
 *.o
 *.ll
+.metals
+.DS_Store
