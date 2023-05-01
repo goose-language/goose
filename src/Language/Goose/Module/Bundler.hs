@@ -13,6 +13,9 @@ import qualified Control.Monad.State as ST
 import qualified Language.Goose.CST.Modules.Declaration as D
 import qualified Language.Goose.CST.Annoted as C
 
+import Control.Arrow
+import Data.Functor
+
 local' :: MonadBundling m => (BundlingState -> BundlingState) -> m a -> m a
 local' f m = do
   s <- ST.get
@@ -31,7 +34,7 @@ local f m = do
 
 -- | Check for duplicate definitions.
 
-checkToplevel :: [String] -> Located (Toplevel) -> [String]
+checkToplevel :: [String] -> Located Toplevel -> [String]
 checkToplevel names (Public (Function { functionName = (C.Annoted name _) } :>: _) :>:_) = if name `elem` names
   then filter (/= name) names
   else names
@@ -45,7 +48,7 @@ checkToplevel names (Namespace _ toplevels :>: _) = concatMap (checkToplevel nam
 checkToplevel names (Public toplevel :>: _) = checkToplevel names toplevel
 checkToplevel names _ = names
 
-checkModule :: [String] -> [Located (Toplevel)] -> [String]
+checkModule :: [String] -> [Located Toplevel] -> [String]
 checkModule = foldl checkToplevel
 
 createName :: MonadBundling m => String -> m String
@@ -53,7 +56,7 @@ createName name = do
   paths <- ST.gets currentPaths
   return $ (if not (null paths) then L.intercalate "::" paths ++ "::" else "") ++ name
 
-analyseToplevel :: MonadBundling m => Located (Toplevel) -> m [Located (Toplevel)]
+analyseToplevel :: MonadBundling m => Located Toplevel -> m [Located Toplevel]
 analyseToplevel (Function (C.Annoted name ret) gens args body :>: pos) = do
   (name', new) <- do
     if name == "main"
@@ -62,22 +65,21 @@ analyseToplevel (Function (C.Annoted name ret) gens args body :>: pos) = do
         name' <- createName name
         return (name', name')
   let args' = map C.annotedName args
-  tys <- mapM (`resolveImportedMaybeType` pos) $ map C.annotedType args
+  tys <- mapM ((`resolveImportedMaybeType` pos) . C.annotedType) args
   ret <- resolveImportedMaybeType ret pos
   let env' = M.fromList $ zip args' args'
-  body' <- local' (\s -> s { mappings = M.insert name' new (M.union env' (mappings s)) }) $ do
+  body' <- local' (\s -> s { mappings = M.insert name' new (M.union env' (mappings s)) }) $
     resolveImportedExpressions body
   return [Function (C.Annoted new ret) gens (zipWith C.Annoted args' tys) body' :>: pos]
-analyseToplevel (Namespace name toplevels :>: _) = do
+analyseToplevel (Namespace name toplevels :>: _) =
   case name of
-    "_" -> do
-      toplevels <- local' (const emptyBundling) $ keepPublic . concat <$> mapM analyseToplevel toplevels
-      return toplevels
+    "_" ->
+      local' (const emptyBundling) $ keepPublic . concat <$> mapM analyseToplevel toplevels
     '$':name' -> do
       ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name'] }
       toplevels' <- local' (const emptyBundling) $ concat <$> mapM analyseToplevel toplevels
       ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
-      return $ (keepPublic toplevels')
+      return (keepPublic toplevels')
     _ -> do
       ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name] }
       toplevels' <- concat <$> mapM analyseToplevel toplevels
@@ -96,11 +98,11 @@ analyseToplevel (Enumeration name gens decls :>: pos) = do
   (name', new) <- do
     name' <- createName name
     return (name', name')
-      
+
   ST.modify $ \s -> s { types = M.insert name' new (types s) }
 
   decls' <- mapM (\(C.Annoted name' ty) -> C.Annoted <$> createName name' <*> mapM (`resolveImportedType` pos) ty) decls
-  let declsNames = zip (map C.annotedName decls') (map C.annotedName decls')
+  let declsNames = map (C.annotedName &&& C.annotedName) decls'
   ST.modify $ \s -> s { mappings = M.union (M.fromList declsNames) (mappings s) }
 
   return [Enumeration new gens decls' :>: pos]
@@ -108,7 +110,7 @@ analyseToplevel (Type name gens decls :>: pos) = do
   (name', new) <- do
     name' <- createName name
     return (name', name')
-      
+
   ST.modify $ \s -> s { types = M.insert name' new (types s) }
 
   decls' <- resolveImportedType decls pos
@@ -124,11 +126,11 @@ analyseToplevel (Declaration (name C.:@ ty) expr :>: pos) = do
   name' <- createName name
   ST.modify $ \s -> s { mappings = M.insert name' name' (mappings s) }
   return [Declaration (name' C.:@ ty') expr' :>: pos]
-  
+
 analyseToplevel x = return [x]
 
-keepPublic :: [Located (Toplevel)] -> [Located (Toplevel)]
-keepPublic = 
+keepPublic :: [Located Toplevel] -> [Located Toplevel]
+keepPublic =
     map (\x'@(Located _ x) -> case x of
       Public x'' -> x''
       _ -> x')
@@ -136,7 +138,7 @@ keepPublic =
 keep :: Ord k => M.Map k a -> [k] -> M.Map k a
 keep m ks = M.fromList $ filter (\(k, _) -> k `elem` ks) $ M.toList m
 
-lookupModule :: MonadBundling m => Maybe [String] -> [Located Toplevel] -> m [Located (Toplevel)]
+lookupModule :: MonadBundling m => Maybe [String] -> [Located Toplevel] -> m [Located Toplevel]
 lookupModule elements ast@(Located pos _:_) = do
   let notFound = checkModule <$> elements <*> pure ast
   case notFound of
@@ -192,7 +194,7 @@ resolveImportedMaybeType (Just t) pos = do
   t' <- resolveImportedType t pos
   return $ Just t'
 
-resolveImportedExpressions :: MonadBundling m => Located (Expression) -> m (Located (Expression))
+resolveImportedExpressions :: MonadBundling m => Located Expression -> m (Located Expression)
 resolveImportedExpressions (Variable name :>: pos) = do
   mappings' <- ST.gets mappings
   case M.lookup (makeName name) mappings' of
@@ -204,8 +206,8 @@ resolveImportedExpressions (Application n args :>: pos) = do
   return $ Application n' args' :>: pos
 resolveImportedExpressions (Lambda args ret body :>: pos) = do
   let names = map C.annotedName args
-  tys <- mapM (`resolveImportedMaybeType` pos) $ map C.annotedType args
-  body' <- local' (\s -> s { mappings = M.union (M.fromList $ zip names names) (mappings s) }) $ do
+  tys <- mapM ((`resolveImportedMaybeType` pos) . C.annotedType) args
+  body' <- local' (\s -> s { mappings = M.union (M.fromList $ zip names names) (mappings s) }) $
     resolveImportedExpressions body
   ret' <- resolveImportedMaybeType ret pos
   return $ Lambda (zipWith C.Annoted names tys) ret' body' :>: pos
@@ -262,7 +264,7 @@ resolveImportedExpressions (StructureAccess expr name :>: pos) = do
 resolveImportedExpressions (Match expr cases :>: pos) = do
   expr' <- resolveImportedExpressions expr
   cases' <- mapM (\(Located pos pattern, expr) -> do
-    pattern' <- resolveImportedPattern pattern >>= return . (:>: pos)
+    pattern' <- resolveImportedPattern pattern <&> (:>: pos)
     expr' <- resolveImportedExpressions expr
     return (pattern', expr')) cases
   return $ Match expr' cases' :>: pos
@@ -284,26 +286,33 @@ resolveImportedPattern (ListPattern names) = do
 resolveImportedPattern (StructurePattern fields) = do
   fields' <- mapM (\(name, Located pos expr) -> do
     expr' <- resolveImportedPattern expr
-    return $ (name, expr' :>: pos)) fields
+    return (name, expr' :>: pos)) fields
   return $ StructurePattern fields'
 resolveImportedPattern (LiteralPattern l) = return $ LiteralPattern l
-resolveImportedPattern (WildcardPattern) = return $ WildcardPattern
+resolveImportedPattern WildcardPattern = return WildcardPattern
 resolveImportedPattern (ConstructorPattern name pats) = do
   mappings' <- ST.gets mappings
   name <- case M.lookup (makeName name) mappings' of
     Just name' -> return (D.Simple name')
     Nothing -> return name
-  pats' <- mapM (\(Located pos n) -> resolveImportedPattern n >>= return . (:>: pos)) pats
+  pats' <- mapM (\(Located pos n) -> resolveImportedPattern n <&> (:>: pos)) pats
   return $ ConstructorPattern name pats'
-  
+
 resolveImportedUpdate :: MonadBundling m => Located Updated -> m (Located Updated)
 resolveImportedUpdate (VariableUpdate name :>: pos) = do
   mappings' <- ST.gets mappings
   case M.lookup (makeName name) mappings' of
     Just name' -> return $ VariableUpdate (D.Simple name') :>: pos
     Nothing -> return $ VariableUpdate name :>: pos
+resolveImportedUpdate (ListUpdate arr index :>: pos) = do
+  arr' <- resolveImportedUpdate arr
+  index' <- resolveImportedExpressions index
+  return $ ListUpdate arr' index' :>: pos
+resolveImportedUpdate (StructureUpdate expr name :>: pos) = do
+  expr' <- resolveImportedUpdate expr
+  return $ StructureUpdate expr' name :>: pos
 resolveImportedUpdate (Located pos _) = E.throwError ("Not implemented", pos)
 
-runModuleBundling :: (E.MonadIO m, MonadFail m) => [Located Toplevel] -> m (Either (String, Position) ([Located Toplevel]))
-runModuleBundling toplevel = do
+runModuleBundling :: (E.MonadIO m, MonadFail m) => [Located Toplevel] -> m (Either (String, Position) [Located Toplevel])
+runModuleBundling toplevel =
   E.runExceptT (ST.evalStateT (lookupModule Nothing toplevel) (BundlingState [] mempty mempty 0 []))

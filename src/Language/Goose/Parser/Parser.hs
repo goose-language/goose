@@ -207,7 +207,18 @@ parseUpdate = L.locate $ do
   C.Update var <$> parseExpression
 
 parseVariableUpdate :: Monad m => L.Goose m C.Updated
-parseVariableUpdate = P.choice [
+parseVariableUpdate = E.buildExpressionParser table $ P.choice [
     L.locate $ C.VariableUpdate <$> P.parseNamespaced,
     L.parens parseVariableUpdate
   ]
+  where table = [[ E.Postfix $ makeUnaryOp ops ]]
+        ops = struct <|> array
+        struct = do
+          L.reservedOp "."
+          name <- L.identifier
+          p <- P.getPosition
+          return $ \x@(C.Located (s, _) _) -> C.StructureUpdate x name C.:>: (s, p)
+        array = do
+          index <- L.brackets parseExpression
+          p <- P.getPosition
+          return $ \x@(C.Located (s, _) _) -> C.ListUpdate x index C.:>: (s, p)

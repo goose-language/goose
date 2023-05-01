@@ -146,6 +146,8 @@ data Expression
 
 data Updated
   = VariableUpdate Namespaced
+  | StructureUpdate (Located Updated) String
+  | ListUpdate (Located Updated) (Located Expression)
   deriving Eq
 
 instance Show Toplevel where
@@ -182,3 +184,5 @@ instance Show Expression where
 
 instance Show Updated where
   show (VariableUpdate name) = show name
+  show (StructureUpdate structure field) = show structure ++ "." ++ field
+  show (ListUpdate list index) = show list ++ "[" ++ show index ++ "]"
