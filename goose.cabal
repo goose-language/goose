@@ -111,6 +111,7 @@ library
         Language.Goose.CLang.Build
         Language.Goose.CLang.Garbage
         Language.Goose.CLang.Pattern
+        Language.Goose.CLang.Ternary
 
         Language.Goose.LLVM.BuildLibrary
         Language.Goose.LLVM.Compiler
