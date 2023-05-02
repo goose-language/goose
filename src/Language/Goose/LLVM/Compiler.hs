@@ -211,7 +211,7 @@ convertStatement (IR.IRFor name list exprs) = do
   i <- IRB.alloca AST.i64 Nothing 0
   IRB.store i 0 $ ConstantOperand $ C.Int 64 0
   IRB.br condBlName
-  
+
   -- Create the condition block
   namedBlock condBlName
   i' <- IRB.load i 0
@@ -312,13 +312,24 @@ convertExpression (IR.IRList exprs) = do
   IRB.call arrFun $ (ConstantOperand $ C.Int 64 (toInteger $ length exprs), []) : map (,[]) exprs'
 convertExpression (IR.IRBinary op _ _) = error $ "Should not encounter " ++ op ++ " operator in IR."
 convertExpression (IR.IRTernary cond t f) = do
+  then' <- IRB.freshName "then"
+  else' <- IRB.freshName "else"
+  merge' <- IRB.freshName "merge"
+
   cond' <- convertExpression cond
   condConversion <- IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i1 [AST.i64] False) (AST.Name $ fromString "decode_boolean")) [(cond', [])]
+  IRB.condBr condConversion then' else'
 
+  namedBlock then'
   t' <- convertExpression t
-  f' <- convertExpression f
+  IRB.br merge'
 
-  IRB.select condConversion t' f'
+  namedBlock else'
+  f' <- convertExpression f
+  IRB.br merge'
+
+  namedBlock merge'
+  IRB.phi [(t', then'), (f', else')]
 convertExpression (IR.IRListAccess list index) = do
   list' <- convertExpression list
   index' <- convertExpression index

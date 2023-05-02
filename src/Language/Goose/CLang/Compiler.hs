@@ -11,6 +11,7 @@ import Language.Goose.CLang.Definition.Generation
 import Language.Goose.CLang.Pattern
 import Data.Bifunctor
 import Data.List
+import Language.Goose.CLang.Ternary
 
 compileToplevel :: ANFDefinition -> Maybe IRToplevel
 compileToplevel (DFunction name args body) = Just $ IRFunction (varify name) (map varify args) (map compileStatement body)
@@ -88,4 +89,4 @@ compile xs = do
   let xs' = nub $ mapMaybe compileToplevel xs
   let funs = getAllFunctions xs' \\ ["main", "$$init$$"]
   let decls = generateDeclarations funs
-  decls ++ xs'
+  runTernaryTransform $ decls ++ xs'
