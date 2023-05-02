@@ -26,9 +26,8 @@ public module IO
 
   declare exit[a](code: int): a
 
-  def throw(message: string): nil do
+  def throw[a](message: string): a do
     IO::println(message)
-    IO::exit(1)
-    return nil
+    return IO::exit(1)
   end
 end
