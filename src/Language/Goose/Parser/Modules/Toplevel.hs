@@ -18,7 +18,6 @@ parseToplevel parseExpression = P.choice [
     P.try $ parseDeclaration parseExpression,
     parseFunction parseExpression,
     parsePublic parseExpression,
-    P.try parseImportAs,
     parseImport
   ]
 
@@ -104,10 +103,3 @@ parseImport :: Monad m => L.Goose m C.Toplevel
 parseImport = L.locate $ do
   L.reserved "import"
   C.Import <$> L.stringLiteral
-
-parseImportAs :: Monad m => L.Goose m C.Toplevel
-parseImportAs = L.locate $ do
-  L.reserved "import"
-  name <- L.stringLiteral
-  L.reserved "as"
-  C.ImportAs name <$> L.identifier

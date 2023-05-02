@@ -4,7 +4,7 @@ module Language.Goose.Module.Resolver where
 import Language.Goose.CST.Located
 import Language.Goose.CST.Expression
 import Control.Monad.IO.Class
-import Control.Monad.Except ( MonadError(throwError), runExceptT )
+import Control.Monad.Except
 import Language.Goose.Parser.Parser
 import System.Exit
 import Log.Error
@@ -21,9 +21,7 @@ resolveImport _ name pos = do
   let path = if startsWith "std" name then stdName else name
 
   fileExists <- liftIO $ doesFileExist path
-  if not fileExists
-    then throwError ("Could not find module " ++ name, pos)
-    else return ()
+  unless fileExists $ throwError ("Could not find module " ++ name, pos)
 
   content <- liftIO $ readFile path
   ast <- parseGoose name content
@@ -41,11 +39,7 @@ resolveImports :: MonadResolver m => String -> [Located Toplevel] -> m [Located 
 resolveImports dir (Located pos (Import name) : toplevels) = do
   resolved <- resolveImport dir name pos
   rest <- resolveImports dir toplevels
-  return $ (Namespace "_" resolved :>: pos) : rest 
-resolveImports dir (Located pos (ImportAs name alias) : toplevels) = do
-  resolved <- resolveImport dir name pos
-  rest <- resolveImports dir toplevels
-  return $ (Namespace ('$' : alias) resolved :>: pos) : rest 
+  return $ (Namespace "_" resolved :>: pos) : rest
 resolveImports dir (toplevel : toplevels) = do
   rest <- resolveImports dir toplevels
   return $ toplevel : rest

@@ -52,10 +52,6 @@ data Toplevel
   -- | Of the form: import moduleName
   | Import Name
 
-  -- | An import-as declaration
-  -- | Of the form: import moduleName as alias
-  | ImportAs Name Name
-
   -- | A function declaration
   -- | Of the form: declare functionName(args): ret
   | Declare {
@@ -157,7 +153,6 @@ instance Show Toplevel where
   show (Enumeration name gens members) = "enum " ++ name ++ show gens ++ " { " ++ intercalate ", " (map (\(Annoted name' tys) -> if null tys then name' else name' ++ "(" ++ intercalate ", " (map show tys) ++ ")") members) ++ " }"
   show (Namespace name body) = "module " ++ name ++ " " ++ intercalate "; " (map show body) ++ " end"
   show (Import name) = "import " ++ name
-  show (ImportAs name alias) = "import " ++ name ++ " as " ++ alias
   show (Declare name gens (Just args) ret) = "def " ++ name ++ show gens ++ "(" ++ intercalate ", " (map show args) ++ "): " ++ show ret
   show (Declare name gens Nothing ret) = "def " ++ name ++ show gens ++ ": " ++ show ret
   show (EnumDeclare name gens) = "declare enum " ++ name ++ show gens
