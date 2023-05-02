@@ -45,7 +45,7 @@ resolveImports dir (Located pos (Import name) : toplevels) = do
 resolveImports dir (Located pos (ImportAs name alias) : toplevels) = do
   resolved <- resolveImport dir name pos
   rest <- resolveImports dir toplevels
-  return $ (Namespace ("$" ++ alias) resolved :>: pos) : rest 
+  return $ (Namespace ('$' : alias) resolved :>: pos) : rest 
 resolveImports dir (toplevel : toplevels) = do
   rest <- resolveImports dir toplevels
   return $ toplevel : rest

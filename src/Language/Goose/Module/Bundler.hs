@@ -78,12 +78,16 @@ analyseToplevel (Namespace name toplevels :>: _) =
     '$':name' -> do
       ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name'] }
       toplevels' <- local' (const emptyBundling) $ concat <$> mapM analyseToplevel toplevels
-      ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
+      ST.modify $ \s -> s { currentPaths = case currentPaths s of
+        [] -> []
+        _ -> init $ currentPaths s }
       return (keepPublic toplevels')
     _ -> do
       ST.modify $ \s -> s { currentPaths = currentPaths s ++ [name] }
       toplevels' <- concat <$> mapM analyseToplevel toplevels
-      ST.modify $ \s -> s { currentPaths = init $ currentPaths s }
+      ST.modify $ \s -> s { currentPaths = case currentPaths s of
+        [] -> []
+        _ -> init $ currentPaths s }
       return $ keepPublic toplevels'
 analyseToplevel (Declare name gens decl ret :>: pos) = do
   decl' <- case decl of

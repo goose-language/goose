@@ -64,4 +64,5 @@ parseNamespaced =  do
   names <- P.try (P.sepBy1 L.identifier (L.reservedOp "::")) P.<|> (:[]) <$> L.identifier
   case names of 
     [name] -> return $ if isCapitalized name then D.ID (D.Simple name) else D.Generic name
-    _ -> return . D.ID $ D.Namespaced (init names) (last names)
+    _:_ -> return . D.ID $ D.Namespaced (init names) (last names)
+    _ -> error "impossible"

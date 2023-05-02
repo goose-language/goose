@@ -10,7 +10,8 @@ parseNamespaced = P.try (do
     names <- P.sepBy1 L.identifier (L.reservedOp "::")
     case names of 
       [name] -> return $ D.Simple name
-      _ -> return $ D.Namespaced (init names) (last names))
+      _:_ -> return $ D.Namespaced (init names) (last names)
+      _ -> fail "Impossible")
   P.<|> D.Simple <$> L.identifier
 
 parsePattern :: Monad m => L.Goose m C.Pattern
