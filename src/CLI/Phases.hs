@@ -8,6 +8,7 @@ import Language.Goose.Transformation.ANF.ANF
 import Language.Goose.Transformation.Closure.Conversion
 import Language.Goose.Transformation.EtaExpansion
 import Language.Goose.Transformation.DeclarationRemover
+import Language.Goose.Transformation.AlphaConversion
 import Language.Goose.LLVM.BuildLibrary (buildExecutable)
 import Data.List
 
@@ -39,6 +40,7 @@ compileFromString input filename libraries flags output target = do
                   ast <- runANF ast
                   ast <- return $ runClosureConversion ast
                   ast <- return $ addInitFunction ast
+                  ast <- return $ runAlphaConversion ast
                   buildExecutable ast libraries flags output target
 
 getANFDefinitions :: String -> [Located Toplevel] -> String -> IO (Maybe [ANFDefinition])
