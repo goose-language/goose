@@ -40,7 +40,7 @@ compileFromString input filename libraries flags output target = do
                   ast <- runANF ast
                   ast <- return $ runClosureConversion ast
                   ast <- return $ addInitFunction ast
-                  ast <- return $ runAlphaConversion ast
+                  ast <- runAlphaConversion ast
                   buildExecutable ast libraries flags output target
 
 getANFDefinitions :: String -> [Located Toplevel] -> String -> IO (Maybe [ANFDefinition])
@@ -60,5 +60,6 @@ getANFDefinitions content ast' filename = do
               ast <- return $ runEtaExpansion ast'
               ast <- runANF ast
               ast <- return $ runClosureConversion ast
-              return . Just $ addInitFunction ast
+              ast <- return $ addInitFunction ast
+              Just <$> runAlphaConversion ast
                 

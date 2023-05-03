@@ -97,7 +97,7 @@ subst (SReturn e) name expr = SReturn $ substExpr e name expr
 subst (SIf e1 e2 e3) name expr = SIf (substExpr e1 name expr) (map (\e -> subst e name expr) e2) (subst <$> e3 <*> pure name <*> pure expr)
 subst (SWhile e1 e2) name expr = SWhile (substExpr e1 name expr) (map (\e -> subst e name expr) e2)
 subst (SLet name' e) name expr = if name == name' then SLet name' e else SLet name' (substExpr e name expr)
-subst (SFor name list exprs) name' expr = SFor name (substExpr list name' expr) $ if name == name' then exprs else map (\e -> subst e name expr) exprs
+subst (SFor name list exprs) name' expr = SFor name (substExpr list name' expr) $ if name == name' then exprs else map (\e -> subst e name' expr) exprs
 subst (SBlock exprs) name expr = SBlock $substBlock exprs name expr
 subst SBreak _ _ = SBreak
 subst SContinue _ _ = SContinue
@@ -108,6 +108,10 @@ substBlock (SLet name e:rest) name' expr = if name == name' then SLet name e : r
 substBlock (SBlock exprs:rest) name expr = SBlock (substBlock exprs name expr) : substBlock rest name expr
 substBlock (e:rest) name expr = subst e name expr : substBlock rest name expr
 substBlock [] _ _ = []
+
+substManyBlock :: [ANFStatement] -> [(String, ANFExpression)] -> [ANFStatement]
+substManyBlock stmts [] = stmts
+substManyBlock stmts ((name, expr):rest) = substManyBlock (substBlock stmts name expr) rest
 
 closureConvert :: MonadClosure m => ANFExpression -> String -> m ANFExpression
 closureConvert (ELambda args expr) name = do
