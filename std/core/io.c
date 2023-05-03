@@ -142,20 +142,16 @@ VALUE IO_readFile(VALUE args) {
   VALUE path = index_(args, 1);
 
   FILE* file = fopen(decode_string(path), "r");
-  fseek(file, 0L, SEEK_END);
-  size_t len = ftell(file);
-  rewind(file);
 
-  char* buffer = malloc(sizeof(char) * len);
+  int MAX_SIZE = 128;
+  char* buffer = malloc(sizeof(char) * MAX_SIZE);
   int i = 0;
-  char c;
-  while ((c = fgetc(file)) != EOF) {
-    buffer[i] = c;
-    i++;
+  char* c = malloc(sizeof(char) * MAX_SIZE);
+  while (fgets(buffer, MAX_SIZE, file) != NULL) {
+    c = strcat(c, buffer);
   }
-  buffer[len] = '\0';
   fclose(file);
-  return string(buffer);
+  return string(c);
 }
 
 VALUE IO_writeFile(VALUE args) {
