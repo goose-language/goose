@@ -9,6 +9,7 @@ import Language.Goose.CST.Located
 import qualified Data.Map as M
 import qualified Data.Set as S
 import qualified Language.Goose.CST.Annoted as C
+import Data.Bifunctor (Bifunctor(second))
 
 type Variables = M.Map String T.Scheme
 type Environment = (Variables, Variables)
@@ -121,7 +122,7 @@ instance Types Expression where
   apply s (Binary op e1 e2) = Binary op (apply s e1) $ apply s e2
   apply s (Structure fields) = Structure $ apply s fields
   apply s (StructureAccess e f) = StructureAccess (apply s e) f
-
+  apply s (InternStructure fields) = InternStructure $ map (second $ apply s) fields
 instance Types Updated where
   free _ = undefined
 
@@ -145,6 +146,7 @@ instance Types Toplevel where
   apply s (Function name args ret body) = Function name (apply s args) (apply s ret) (apply s body)
   apply s (Declaration name ty expr) = Declaration name (apply s ty) (apply s expr)
   apply s (Declare name ty) = Declare (apply s name) (apply s ty)
+  apply s (Expression e) = Expression $ apply s e
 
 instance Types a => Types (C.Annoted a) where
   free = free . C.annotedType

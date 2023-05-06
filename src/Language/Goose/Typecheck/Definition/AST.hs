@@ -24,6 +24,8 @@ data Toplevel
       declarationBody :: Expression }
 
   | Declare [Type] (Annoted Type)
+
+  | Expression Expression
   deriving Eq
 
 data Expression
@@ -95,6 +97,10 @@ data Expression
   -- | A structure access expression
   -- | Of the form: e.x
   | StructureAccess Expression Name
+
+  -- | An intern structure 
+  -- | Of the form: struct { -1: type, 0: x₀, 1: x₁, ..., n: xₙ }
+  | InternStructure [(Int, Expression)]
   deriving Eq
 
 data Updated
@@ -116,6 +122,7 @@ instance Show Toplevel where
   show (Function name args returnType body) = "fun " ++ name ++ show args ++ show returnType ++ " = " ++ show body
   show (Declaration name type_ body) = "let " ++ name ++ ": " ++ show type_ ++ " = " ++ show body
   show (Declare toplevel gens) = "def " ++ show gens ++ show toplevel
+  show (Expression e) = show e
 
 instance Show Pattern where
   show (PVariable x _) = x

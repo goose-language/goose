@@ -326,8 +326,8 @@ inferToplevel (C.Located pos (C.Enumeration name generics' constructors)) = do
     args :-> ret -> do
       let args' = zipWith (\t' i -> C.Annoted ("a" ++ show i) t') args [(0 :: Integer)..]
       let variables' = zipWith (\t' i -> A.Variable ("a" ++ show i) t') args [(0 :: Integer)..]
-      let fields = zipWith (\_ i -> "a" ++ show i) args [(0 :: Integer)..]
-      return $ A.Function n args' ret (A.Return $ A.Structure $ zip fields variables' ++ [("type", A.Literal (C.String n)), ("$$enum", A.Literal (C.Bool True))])
+      let fields = [(0 :: Int)..]
+      return $ A.Function n args' ret (A.Return $ A.InternStructure $ (-1, A.Literal (C.String n)) : zip fields variables')
     _ -> E.throwError ("Invalid constructor of enumeration", Nothing, pos)) constructors'
 
   return (Void, structures)
@@ -352,6 +352,9 @@ inferToplevel (C.Located pos (C.Declaration (name C.:@ ty) expr)) = do
   let scheme = generalize env tv
   ST.modify $ \s' -> s' { variables = M.insert name scheme (variables s') }
   return (Void, [A.Declaration name  tv e'])
+inferToplevel (C.Located _ (C.Expression e)) = do
+  (_, e') <- inferExpression e
+  return (Void, [A.Expression e'])
 inferToplevel (C.Located pos _) = E.throwError ("Unimplemented", Nothing, pos)
 
 performInfer :: Monad m => [C.Located C.Toplevel] -> m (Either (String, Maybe String, C.Position) [A.Toplevel])

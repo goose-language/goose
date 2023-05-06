@@ -119,11 +119,13 @@ analyseToplevel (EnumDeclare name _ :>: _) = do
   return []
 analyseToplevel (Declaration (name C.:@ ty) expr :>: pos) = do
   ty' <- resolveImportedMaybeType ty pos
-  expr' <- resolveImportedExpressions expr
   name' <- createName name
   ST.modify $ \s -> s { mappings = M.insert name' name' (mappings s) }
+  expr' <- resolveImportedExpressions expr
   return [Declaration (name' C.:@ ty') expr' :>: pos]
-
+analyseToplevel (Expression expr :>: pos) = do
+  expr' <- resolveImportedExpressions expr
+  return [Expression expr' :>: pos]
 analyseToplevel x = return [x]
 
 keepPublic :: [Located Toplevel] -> [Located Toplevel]
