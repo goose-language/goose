@@ -26,6 +26,8 @@ import Data.Char (ord)
 import qualified LLVM.AST.Typed as AST
 import qualified LLVM.AST.IntegerPredicate as IP
 import Data.Functor
+import Data.List (sortBy)
+import Data.Ord (comparing)
 
 type LLVM m = (IRB.MonadModuleBuilder m, ST.MonadState (M.Map String AST.Operand, Int) m, IRB.MonadIRBuilder m)
 
@@ -61,6 +63,7 @@ valuesTy = M.fromList [
     ("list", AST.FunctionType AST.i64 [AST.i64] True),
     ("makeLambda", AST.FunctionType AST.i64 [funTy] False),
     ("structure", AST.FunctionType AST.i64 [AST.i64] True),
+    ("intern", AST.FunctionType AST.i64 [AST.ptr AST.i8, AST.i64] True),
 
     -- Equality operators
     ("eq", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
@@ -76,6 +79,7 @@ valuesTy = M.fromList [
     ("decode_boolean", AST.FunctionType AST.i1 [AST.i64] False),
     ("index_", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
     ("property_", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
+    ("intern_property_", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
 
     -- Comparison operators
     ("lt", AST.FunctionType AST.i64 [AST.i64, AST.i64] False),
@@ -91,6 +95,7 @@ valuesTy = M.fromList [
 
     ("length", AST.FunctionType AST.i64 [AST.i64] False),
     ("in", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
+    ("is", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False), 
 
     -- Update functions
     ("update_index", AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False),
@@ -301,7 +306,7 @@ convertExpression (IR.IRVariable name) = do
 convertExpression (IR.IRApplication (IR.IRVariable "property_") [dict, IR.IRLiteral (L.String key)]) = do
   dict' <- convertExpression dict
   key' <- string key
-  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name "property_")) [(dict', []), (key', [])]
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.i64] False) (AST.Name "property_")) [(dict', []), (key', [])]
 convertExpression (IR.IRApplication f args) = do
   f' <- convertExpression f
   args' <- mapM convertExpression args
@@ -334,10 +339,6 @@ convertExpression (IR.IRListAccess list index) = do
   list' <- convertExpression list
   index' <- convertExpression index
   IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.i64] False) (AST.Name "index_")) [(list', []), (index', [])]
-convertExpression (IR.IRDictAccess dict key) = do
-  dict' <- convertExpression dict
-  key' <- string key
-  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name "property_")) [(dict', []), (key', [])]
 convertExpression (IR.IREUpdate (IR.IRVariable name) expr) = do
   update <- IRB.alloca AST.i64 Nothing 0
   expr' <- convertExpression expr
@@ -350,6 +351,10 @@ convertExpression (IR.IREUpdate (IR.IRListAccess lst idx) expr) = do
   idx' <- convertExpression idx
   integered <- IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64] False) (AST.Name $ fromString "decode_integer")) [(idx', [])]
   IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False) (AST.Name $ fromString "update_index")) [(lst', []), (integered, []), (expr', [])]
+convertExpression (IR.IRDictAccess e key) = do
+  e' <- convertExpression e
+  key' <- string key
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name $ fromString "property_")) [(e', []), (key', [])]
 convertExpression (IR.IREUpdate (IR.IRDictAccess dict key) expr) = do
   expr' <- convertExpression expr
   dict' <- convertExpression dict
@@ -364,6 +369,23 @@ convertExpression (IR.IRIn expr field) = do
   expr' <- convertExpression expr
   e' <- string field
   IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name "in")) [(expr', []), (e', [])]
+convertExpression (IR.IRInternDict fields) = do
+  let type' = lookup (-1) fields
+  case type' of 
+    Just (IR.IRLiteral (L.String value)) -> do
+      let fields' = map snd $ sortBy (comparing fst) $ filter ((/= -1) . fst) fields
+      fields'' <- mapM convertExpression fields'
+      let arrFun = ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.ptr AST.i8, AST.i64] True) (AST.Name "intern")
+      v <- string value
+      IRB.call arrFun $ [(v, []), (ConstantOperand (C.Int 64 (toInteger $ length fields'')), [])] ++ map (,[]) fields''
+    _ -> error "No type specified for interned dictionary"
+convertExpression (IR.IRIs e name) = do
+  e' <- convertExpression e
+  e'' <- string name
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name "is")) [(e', []), (e'', [])]
+convertExpression (IR.IRInternDictAccess dict key) = do
+  dict' <- convertExpression dict
+  IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.i64] False) (AST.Name $ fromString "intern_property_")) [(dict', []), (ConstantOperand (C.Int 64 (toInteger key)), [])]
 convertExpression _ = return $ ConstantOperand $ C.Int 64 0
 
 runLLVM :: [IR.IRToplevel] -> AST.Module
@@ -375,19 +397,17 @@ passes = LL.defaultCuratedPassSetSpec { LL.optLevel = Just 3 }
 runOpt :: AST.Module -> IO AST.Module
 runOpt mod' =
   LL.withContext $ \context ->
-  LL.withModuleFromAST context mod' $ \m ->
-    LL.withPassManager passes $ \pm -> do
-      LL.runPassManager pm m
-      optmod <- LL.moduleAST m
-      s <- LL.moduleBitcode m
-      putStrLn (C.unpack s)
-      return optmod
+    LL.withModuleFromAST context mod' $ \m ->
+      LL.withPassManager passes $ \pm -> do
+        LL.runPassManager pm m
+        LL.moduleAST m
 
 runCompiler :: [IR.IRToplevel] -> IO String
 runCompiler xs = do
   -- mapM_ traceShowM xs
   let mod' = runLLVM xs
+  mod'' <- runOpt mod'
   s <- LL.withContext $ \context ->
-    LL.withModuleFromAST context mod' $ \m ->
+    LL.withModuleFromAST context mod'' $ \m ->
       LL.moduleLLVMAssembly m
   return $ C.unpack s
