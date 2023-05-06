@@ -13,6 +13,15 @@
 #include "type.h"
 #include "value.h"
 
+VALUE get(Dict dict, char* key) {
+  for (int i = 0; i < dict.length; i++) {
+    if (strcmp(dict.keys[i], key) == 0) {
+      return dict.values[i];
+    }
+  }
+  return unit();
+}
+
 VALUE IO_fileExists (VALUE filename) {
   VALUE v = index_(filename, 1);
   
@@ -101,26 +110,31 @@ VALUE IO_print(VALUE args) {
       break;
     }
 
+    case TYPE_INTERN: {
+      Intern dict = decode_pointer(v)->as_intern;
+      printf("%s", dict.name);
+      printf("(");
+      for (int i = 0; i < dict.length; i++) {
+        IO_print(list(2, unit(), dict.data[i]));
+        if (i != dict.length - 1) printf(", ");
+      }
+      printf(")");
+      break;
+    }
+
     case TYPE_DICT: {
       Dict dict = decode_pointer(v)->as_dict;
-      if (hasProperty(v, "$$enum")) {
-        printf("%s", decode_string(property_(v, "type")));
-        printf("(");
-        Array list_ = getVariantArguments(v)->as_array;
-        for (int i = 0; i < list_.length; i++) {
-          IO_print(list(2, unit(), list_.data[i]));
-          if (i != list_.length - 1) printf(", ");
-        }
-        printf(")");
-      } else {
-        printf("{");
+      printf("{");
+      if (dict.length > 0) {
+        printf(" ");
         for (int i = 0; i < dict.length; i++) {
           printf("%s: ", dict.keys[i]);
           IO_print(list(2, unit(), dict.values[i]));
           if (i != dict.length - 1) printf(", ");
         }
-        printf("}");
+        printf(" ");
       }
+      printf("}");
       break;
     }
 

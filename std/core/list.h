@@ -12,6 +12,7 @@ VALUE Array_push(VALUE args);
 
 // Dictionary functions
 VALUE property_(VALUE dict, char* key);
+VALUE intern_property_(VALUE dict, uint64_t idx);
 VALUE Array_has(VALUE args);
 VALUE in(VALUE dict, char* key);
 

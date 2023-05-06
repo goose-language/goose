@@ -45,6 +45,7 @@ typedef enum {
   TYPE_ARRAY,
   TYPE_DICT,
   TYPE_LAMBDA,
+  TYPE_INTERN
 } ValueType;
 
 // Container for arrays
@@ -67,6 +68,13 @@ typedef struct {
   VALUE (*f)(VALUE args);
 } Lambda;
 
+typedef struct {
+  uint32_t length;
+  uint32_t capacity;
+  char* name;
+  VALUE* data;
+} Intern;
+
 // Container type for values
 typedef struct {
   ValueType type;
@@ -75,8 +83,10 @@ typedef struct {
     Array as_array;
     Dict as_dict;
     Lambda as_lambda;
+    Intern as_intern;
   };
 } HeapValue;
+
 
 VALUE integer(int32_t value);
 VALUE floating(double value);

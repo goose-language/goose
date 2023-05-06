@@ -18,6 +18,26 @@ int length(VALUE list) {
   }
 }
 
+VALUE intern_property_(VALUE dict, uint64_t idx) {
+  if (get_type(dict) == TYPE_INTERN) {
+    Intern heap = decode_pointer(dict)->as_intern;
+    return heap.data[idx];
+  } else {
+    throwError("expected intern, got %s", decode_string(Type_of(list(2, unit(), dict))));
+    return unit();
+  }
+}
+
+VALUE is(VALUE dict, char* type) {
+  if (get_type(dict) == TYPE_INTERN) {
+    Intern heap = decode_pointer(dict)->as_intern;
+    return boolean(strcmp(heap.name, type) == 0);
+  } else {
+    throwError("expected intern, got %s", decode_string(Type_of(list(2, unit(), dict))));
+    return unit();
+  }
+}
+
 VALUE in(VALUE dict, char* key) {
   if (get_type(dict) == TYPE_DICT) {
     Dict heap = decode_pointer(dict)->as_dict;

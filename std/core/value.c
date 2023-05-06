@@ -100,6 +100,25 @@ VALUE string(char* value) {
   return create_pointer(string);
 }
 
+VALUE intern(char* name, int length, ...) {
+  HeapValue* intern = (HeapValue*) malloc(sizeof(HeapValue));
+  intern->type = TYPE_INTERN;
+  intern->as_intern.name = name;
+  intern->as_intern.length = length;
+
+  va_list args;
+  va_start(args, length);
+
+  intern->as_intern.data = malloc(sizeof(VALUE) * length);
+  for (int i = 0; i < length; i++) {
+    intern->as_intern.data[i] = va_arg(args, VALUE);
+  }
+
+  va_end(args);
+
+  return create_pointer(intern);
+}
+
 ValueType get_type(VALUE value) {
   uint64_t signature = value & MASK_SIGNATURE;
   if ((~value & MASK_EXPONENT) != 0) return TYPE_FLOAT;
