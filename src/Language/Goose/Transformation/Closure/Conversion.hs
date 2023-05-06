@@ -89,6 +89,7 @@ substExpr (EUnary op e) name expr = EUnary op (substExpr e name expr)
 substExpr (EList exprs) name expr = EList $ map (\e -> substExpr e name expr) exprs
 substExpr (EListAccess e1 e2) name expr = EListAccess (substExpr e1 name expr) (substExpr e2 name expr)
 substExpr (EUpdate e1 e2) name expr = EUpdate (substExpr e1 name expr) (substExpr e2 name expr)
+substExpr (EInternStructure e) name expr = EInternStructure $ map (\(n, e') -> (n, substExpr e' name expr)) e
 
 subst :: ANFStatement -> String -> ANFExpression -> ANFStatement
 subst (SExpression e) name expr = SExpression $ substExpr e name expr
@@ -232,6 +233,11 @@ convertExpression (EUnary op e) = do
 convertExpression (EUpdate updated e) = do
   (e', stmts) <- convertExpression e
   return (EUpdate updated e', stmts)
+convertExpression (EInternStructure xs) = do
+  xs' <- mapM (\(n, e) -> (n,) <$> convertExpression e) xs
+  let fields = map (\(n, (e, _)) -> (n, e)) xs'
+  let stmts = concatMap (\(_, (_, s)) -> s) xs'
+  return (EInternStructure fields, stmts)
 
 fst3 :: (a, b, c) -> a
 fst3 (a, _, _) = a
