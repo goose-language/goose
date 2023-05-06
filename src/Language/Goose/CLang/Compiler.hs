@@ -80,6 +80,7 @@ compileExpression (EUpdate u e) = IREUpdate (compileExpression u) (compileExpres
 compileExpression (EStructure fields) = IRDict (map (second compileExpression) fields)
 compileExpression (EStructAccess dict "$$fun") = IRApplication (IRVariable "decode_lambda") [compileExpression dict]
 compileExpression (EStructAccess e1 e2) = IRDictAccess (compileExpression e1) e2
+compileExpression (EInternStructure fields) = IRInternDict (map (second compileExpression) fields)
 
 generateDeclarations :: [String] -> [IRToplevel]
 generateDeclarations = map (\x -> IRDeclare x (Just [rttiName]) rttiName)

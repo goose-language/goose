@@ -55,6 +55,17 @@ transformE (IRDict xs) = do
     (v', s) <- transformE v
     return ((k, v'), s)) xs
   return (IRDict xs', concat s)
+transformE (IRInternDict fields) = do
+  (fields', s) <- unzip <$> mapM (\(k, v) -> do
+    (v', s) <- transformE v
+    return ((k, v'), s)) fields
+  return (IRInternDict fields', concat s)
+transformE (IRInternDictAccess x i) = do
+  (x', s1) <- transformE x
+  return (IRInternDictAccess x' i, s1)
+transformE (IRIs e s) = do
+  (e', s1) <- transformE e
+  return (IRIs e' s, s1)
 
 transformS :: MonadTernary m => IRStatement -> m [IRStatement]
 transformS (IRReturn x) = do
