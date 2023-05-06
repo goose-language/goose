@@ -43,6 +43,9 @@ data IRExpression
   | IRDict [(String, IRExpression)]
   | IRDictAccess IRExpression String
   | IRIn IRExpression String
+  | IRIs IRExpression String
+  | IRInternDict [(Int, IRExpression)]
+  | IRInternDictAccess IRExpression Int
   deriving (Eq, Show)
 
 type CType = String
