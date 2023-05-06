@@ -37,7 +37,7 @@ addEtaExpanded name =
 type MonadEta m = ST.MonadState (Int, [String]) m
 
 etaExpandExpr :: MonadEta m => Expression -> m Expression
-etaExpandExpr (Let (name C.:@ t) expr body) =
+etaExpandExpr (Let (C.Annoted name t) expr body) =
   case t of
     arg :-> _ -> case expr of
       Lambda {} -> Let (name C.:@ t) <$> local (etaExpandExpr expr) <*> local (etaExpandExpr body)
@@ -73,12 +73,13 @@ etaExpandExpr (Binary op e1 e2) = Binary op <$> local (etaExpandExpr e1) <*> loc
 etaExpandExpr (Structure fields) = Structure <$> local (mapM (mapM etaExpandExpr) fields)
 etaExpandExpr (StructureAccess e name) = StructureAccess <$> local (etaExpandExpr e) <*> return name
 etaExpandExpr (Update u e) = Update u <$> local (etaExpandExpr e)
-etaExpandExpr _ = error "Not implemented"
+etaExpandExpr (InternStructure fields) = InternStructure <$> local (mapM (mapM etaExpandExpr) fields)
 
 etaExpandTL :: MonadEta m => Toplevel -> m Toplevel
 etaExpandTL (Function name args ret expr) = Function name args ret <$> etaExpandExpr expr
 etaExpandTL (Declaration name ret expr) = Declaration name ret <$> etaExpandExpr expr
 etaExpandTL (Declare name t) = return $ Declare name t
+etaExpandTL (Expression expr) = Expression <$> etaExpandExpr expr
 
 runEtaExpansion :: [Toplevel] -> [Toplevel]
 runEtaExpansion toplevels = ST.evalState (mapM etaExpandTL toplevels) (0, [])

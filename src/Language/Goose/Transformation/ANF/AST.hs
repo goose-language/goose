@@ -18,6 +18,7 @@ data ANFExpression
   | EUpdate ANFExpression ANFExpression
   | EStructure [(String, ANFExpression)]
   | EStructAccess ANFExpression String
+  | EInternStructure [(Int, ANFExpression)]
   deriving Eq
 
 instance Show ANFExpression where
@@ -33,6 +34,7 @@ instance Show ANFExpression where
   show (EUpdate updated expr) = show updated ++ " = " ++ show expr
   show (EStructure fields) = "{" ++ intercalate ", " (map (\(n, e) -> n ++ ": " ++ show e) fields) ++ "}"
   show (EStructAccess struct field) = show struct ++ "." ++ field
+  show (EInternStructure fields) = "{" ++ intercalate ", " (map show fields) ++ "}"
 
 data ANFStatement
   = SLet String ANFExpression

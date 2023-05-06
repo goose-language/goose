@@ -7,28 +7,32 @@ import qualified Language.Goose.Typecheck.Definition.Type as TY
 import qualified Language.Goose.CST.Annoted as C
 import qualified Language.Goose.CST.Literal as C
 import qualified Control.Monad.RWS as RWS
-import qualified Data.List as L
 
 import Language.Goose.Transformation.ANF.Monad
+import Data.Maybe (catMaybes)
 
 v :: TY.Type
 v = TY.Mutable TY.Void
 
-anfTL :: MonadANF m => T.Toplevel -> m ([(String, A.ANFExpression)], A.ANFDefinition)
+anfTL :: MonadANF m => T.Toplevel -> m ([(String, A.ANFExpression)], Maybe A.ANFDefinition)
 anfTL (T.Function name args _ expr) = do
   (lets, expr') <- anfStmt expr
   case name of
-    "main" -> return ([], A.DFunction name [] (createLet lets ++ expr'))
+    "main" -> return ([], Just $ A.DFunction name [] (createLet lets ++ expr'))
     _ -> do
       expr <- case last expr' of
         A.SReturn _ -> return expr'
         A.SExpression e -> return $ init expr' ++ [A.SReturn e]
         _ -> return $ expr' ++ [A.SReturn $ A.ELiteral C.Unit]
-      return ([], A.DFunction name (map C.annotedName args) (createLet lets ++ expr))
+      return ([], Just $ A.DFunction name (map C.annotedName args) (createLet lets ++ expr))
 anfTL (T.Declaration name _ expr) = do
   (lets, expr') <- anfExpr expr
-  return (lets, A.DDeclaration name expr')
-anfTL (T.Declare _ name) = return ([], A.DDeclare name)
+  return (lets, Just $ A.DDeclaration name expr')
+anfTL (T.Declare _ name) = return ([], Just $ A.DDeclare name)
+anfTL (T.Expression e) = do
+  (lets, expr) <- anfStmt e
+  RWS.tell $ createLet lets ++ expr
+  return ([], Nothing)
 
 anfStmt :: MonadANF m => T.Expression -> m ([(String, A.ANFExpression)], [A.ANFStatement])
 anfStmt (T.Let (C.Annoted name _) expr body) = do
@@ -154,6 +158,11 @@ anfExpr (T.While cond body) = do
   (lets, cond) <- anfExpr cond
   (lets', body) <- unzip <$> mapM anfStmt body
   return ([], embed $ createLet lets ++ [A.SWhile cond (createLet (concat lets') ++ concat body)])
+anfExpr (T.InternStructure fields) = do
+  (lets, fields) <- unzip <$> mapM (\(name, expr) -> do
+    (lets, expr) <- anfExpr expr
+    return (lets, (name, expr))) fields
+  return (concat lets, A.EInternStructure fields)
 
 
 anfUpdated :: MonadANF m => T.Updated -> m ([(String, A.ANFExpression)], A.ANFExpression)
@@ -172,5 +181,6 @@ embed ast = A.EApplication (A.ELambda [] ast) []
 
 runANF :: Monad m => [T.Toplevel] -> m [A.ANFDefinition]
 runANF xs = do
-  (lets, xs) <- L.unzip . fst <$> RWS.evalRWST (mapM anfTL xs) [] 0
-  return (createLetTL (concat lets) ++ xs)
+  (res, w) <- RWS.evalRWST (mapM anfTL xs) [] 0
+  let (lets, xs) = unzip res
+  return (createLetTL (concat lets) ++ catMaybes xs ++ [A.DFunction "main" [] w])

@@ -5,7 +5,7 @@ module Language.Goose.Transformation.ANF.Monad where
 import Control.Monad.RWS
 import Language.Goose.Transformation.ANF.AST
 
-type MonadANF m = (MonadRWS [(String, String)] () Int m)
+type MonadANF m = (MonadRWS [(String, String)] [ANFStatement] Int m)
 
 fresh :: MonadANF m => m String
 fresh = do
