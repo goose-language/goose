@@ -9,17 +9,21 @@ import qualified Language.Goose.Parser.Modules.Declaration as D
 
 -- Toplevel parser entry
 parseToplevel :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
-parseToplevel parseExpression = P.choice [
+parseToplevel p = P.choice [
     parseType,
     parseEnumeration,
-    parseModule parseExpression,
+    parseModule p,
     P.try parseEnumDeclaration,
     parseDeclare,
-    P.try $ parseDeclaration parseExpression,
-    parseFunction parseExpression,
-    parsePublic parseExpression,
-    parseImport
+    P.try $ parseDeclaration p,
+    parseFunction p,
+    parsePublic p,
+    parseImport,
+    parseExpression p
   ]
+
+parseExpression :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
+parseExpression p = L.locate $ C.Expression <$> p
 
 parseEnumDeclaration :: Monad m => L.Goose m C.Toplevel
 parseEnumDeclaration = L.locate $ do
@@ -47,7 +51,7 @@ parseType = L.locate $ do
   C.Type name generics <$> D.parseDeclaration
 
 parseFunction :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
-parseFunction parseExpression = L.locate $ do
+parseFunction p = L.locate $ do
   L.reserved "def"
   name <- L.identifier
   generics <- P.option [] $ L.brackets (L.commaSep L.lowered)
@@ -58,20 +62,20 @@ parseFunction parseExpression = L.locate $ do
         ret <- D.parseDeclaration
         s <- P.getPosition
         L.reservedOp "do"
-        exprs <- P.many (parseExpression <* P.optionMaybe L.semi)
+        exprs <- P.many (p <* P.optionMaybe L.semi)
         L.reserved "end"
         e <- P.getPosition
         return (Just ret, C.Located (s, e) (C.Sequence exprs)),
       do
-        body <- parseExpression
+        body <- p
         return (Nothing, body)
     ]
   return $ C.Function (C.Annoted name ret) generics args body
 
 parsePublic :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
-parsePublic parseExpression = L.locate $ do
+parsePublic p = L.locate $ do
   L.reserved "public"
-  body <- parseToplevel parseExpression
+  body <- parseToplevel p
   return $ C.Public body
 
 parseDeclaration :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
@@ -92,10 +96,10 @@ parseDeclare = L.locate $ do
   C.Declare name gens args <$> D.parseDeclaration
 
 parseModule :: Monad m => L.Goose m C.Expression -> L.Goose m C.Toplevel
-parseModule parseExpression = L.locate $ do
+parseModule p = L.locate $ do
   L.reserved "module"
   name <- L.identifier
-  body <- P.many $ parseToplevel parseExpression
+  body <- P.many $ parseToplevel p
   L.reserved "end"
   return $ C.Namespace name body
 

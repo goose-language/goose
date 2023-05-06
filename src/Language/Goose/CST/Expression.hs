@@ -65,6 +65,10 @@ data Toplevel
   | EnumDeclare {
       enumDeclareName :: Name,
       enumDeclareGenerics :: [String] }
+
+  -- | A toplevel expression
+  -- | Of the form: expression
+  | Expression (Located Expression)
   deriving Eq
   
 data Expression
@@ -157,6 +161,7 @@ instance Show Toplevel where
   show (Declare name gens Nothing ret) = "def " ++ name ++ show gens ++ ": " ++ show ret
   show (EnumDeclare name gens) = "declare enum " ++ name ++ show gens
   show (Declaration name expr) = "def " ++ show name ++ " = " ++ show expr
+  show (Expression expr) = show expr
 
 instance Show Expression where
   show (Variable name) = show name
