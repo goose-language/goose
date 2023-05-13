@@ -18,6 +18,7 @@ compileToplevel (DFunction name args body) = Just $ IRFunction (varify name) (ma
 compileToplevel (DDeclaration name e) = Just $ IRDeclaration (varify name) (compileExpression e)
 compileToplevel (DDeclare (Annoted name (_ :-> _))) = Just $ IRDeclare (varify name) (Just [rttiName]) rttiName
 compileToplevel (DDeclare (Annoted name _)) = Just $ IRDeclare (varify name) Nothing rttiName
+
 from :: Type -> CType
 from _ = rttiName
 

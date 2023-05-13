@@ -13,10 +13,20 @@ import System.Directory (setCurrentDirectory, getCurrentDirectory)
 import qualified GHC.IO.Exception as IO
 import Data.Functor
 
+findCompiler :: [String] -> IO (Maybe String)
+findCompiler [] = return Nothing
+findCompiler (x:xs) = do
+  IO.findExecutable x >>= \case
+    Just command -> return $ Just command
+    Nothing -> findCompiler xs
+
+getCompiler :: IO (Maybe String)
+getCompiler = findCompiler $ "clang" : [ "clang-" ++ show i | i <- [(9 :: Int)..16]]
+
 buildExecutable :: [ANFDefinition] -> [String] -> [String] -> String -> String -> IO ()
 buildExecutable ast libs flags output target = do
   let libraries = CL.includeLibrary
-  IO.findExecutable "clang" >>= \case
+  getCompiler >>= \case
     Just command -> do
       current <- getCurrentDirectory
       withTempDirectory current "build" $ \dir -> (do
@@ -32,7 +42,7 @@ buildExecutable ast libs flags output target = do
 buildAndRun :: [ANFDefinition] -> [String] -> [String] -> IO (Maybe String)
 buildAndRun ast libs flags = do
   let libraries = CL.includeLibrary
-  IO.findExecutable "clang" >>= \case
+  getCompiler >>= \case
     Just command -> do
       withTempDirectory getGoosePath "build" $ \dir -> (do
         current <- getCurrentDirectory

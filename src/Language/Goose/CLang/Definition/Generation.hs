@@ -21,7 +21,12 @@ class Generation a where
   generate :: MonadGeneration m => a -> m String
 
 reservedWords :: [String]
-reservedWords = ["auto", "else", "long", "switch", "break", "enum", "register", "typedef", "case", "extern", "return", "union", "char", "float", "short", "unsigned", "const", "for", "signed", "void", "continue", "goto", "sizeof", "volatile", "default", "if", "static", "while", "do", "int", "struct", "_Packed", "double"]
+reservedWords = [
+  -- C reserved words
+  "auto", "else", "long", "switch", "break", "enum", "register", "typedef", "case", "extern", "return", "union", "char", "float", "short", "unsigned", "const", "for", "signed", "void", "continue", "goto", "sizeof", "volatile", "default", "if", "static", "while", "do", "int", "struct", "_Packed", "double", 
+
+  -- Goose specific functions
+  "add", "divide", "multiply", "subtract", "property_", "in", "is", "index_", "length", "throwError", "decode_integer", "decode_floating", "decode_character", "decode_boolean", "toList", "decode_string", "decode_pointer", "decode_lambda", "update_index", "update_property", "eq", "neq", "lt", "gt", "lte", "gte", "toString", "integer", "floating", "character", "list", "unit", "boolean", "structure", "makeLambda", "string", "emptyList", "get_type", "create_pointer"]
 
 varify :: String -> String
 varify n = if n `elem` reservedWords then n' ++ "_" else n'
@@ -172,6 +177,10 @@ instance Generation IRExpression where
     e1' <- generate e1
     s' <- generate (IRLiteral (String s))
     return $ "Array_has(list(2, " ++ e1' ++ ", " ++ s' ++ "))"
+  generate (IRIs e ty) = do
+    e' <- generate e
+    return $ "is(" ++ e' ++ ", " ++ show ty ++ ")"
+    
 
 generateStruct :: MonadGeneration m => [(String, IRExpression)] -> m String
 generateStruct [] = return "NULL"

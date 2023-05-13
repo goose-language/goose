@@ -19,17 +19,13 @@ import qualified LLVM.IRBuilder as IRB
 import qualified Control.Monad.State as ST
 import qualified Data.Map as M
 import qualified Control.Arrow as BF
-import qualified LLVM.AST.Float as C
-import LLVM.AST.Constant (Constant(Float))
-import GHC.Float (double2Float)
-import Data.Char (ord)
 import qualified LLVM.AST.Typed as AST
 import qualified LLVM.AST.IntegerPredicate as IP
 import Data.Functor
 import Data.List (sortBy)
 import Data.Ord (comparing)
-
-type LLVM m = (IRB.MonadModuleBuilder m, ST.MonadState (M.Map String AST.Operand, Int) m, IRB.MonadIRBuilder m)
+import Language.Goose.LLVM.Modules.Monad (LLVM)
+import qualified Language.Goose.LLVM.Modules.Constant as C
 
 retVoid :: LLVM m => m ()
 retVoid = do
@@ -58,7 +54,7 @@ valuesTy = M.fromList [
     ("unit", AST.FunctionType AST.i64 [] False),
     ("boolean", AST.FunctionType AST.i64 [AST.i1] False),
     ("emptyList", AST.FunctionType AST.i64 [] False),
-    ("floating", AST.FunctionType AST.i64 [AST.float] False),
+    ("floating", AST.FunctionType AST.i64 [AST.double] False),
     ("string", AST.FunctionType AST.i64 [AST.ptr AST.i8] False),
     ("list", AST.FunctionType AST.i64 [AST.i64] True),
     ("makeLambda", AST.FunctionType AST.i64 [funTy] False),
@@ -95,7 +91,7 @@ valuesTy = M.fromList [
 
     ("length", AST.FunctionType AST.i64 [AST.i64] False),
     ("in", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
-    ("is", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False), 
+    ("is", AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False),
 
     -- Update functions
     ("update_index", AST.FunctionType AST.void [AST.i64, AST.i64, AST.i64] False),
@@ -277,22 +273,14 @@ convertStatement x = error $ "Not implemented: " ++ show x
 
 convertExpression :: LLVM m => IR.IRExpression -> m AST.Operand
 convertExpression (IR.IRLiteral l) = case l of
-  L.Int i -> do
-    let i' = fromIntegral i
-    IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64] False) (AST.Name "integer")) [(ConstantOperand $ C.Int 64 i', [])]
-  L.Float f ->
-    IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.float] False) (AST.Name "integer")) [(ConstantOperand $ Float $ C.Single (double2Float f), [])]
+  L.Int i -> C.integer i
+  L.Float f -> C.float f
   L.String s -> do
     n <- string s
     IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.ptr AST.i8] False) (AST.Name "string")) [(n, [])]
-  L.Char c -> do
-    let c' = fromIntegral $ ord c
-    IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i8] False) (AST.Name "character")) [(ConstantOperand $ C.Int 8 c', [])]
-  L.Bool b -> do
-    let b' = if b then 1 else 0
-    IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i1] False) (AST.Name "boolean")) [(ConstantOperand $ C.Int 1 b', [])]
-  L.Unit ->
-    IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [] False) (AST.Name "unit")) []
+  L.Char c -> C.char c
+  L.Bool b -> if b then C.true else C.false
+  L.Unit -> C.unit
 convertExpression (IR.IRVariable name) = do
   m <- ST.gets fst
   case M.lookup name m of
@@ -315,7 +303,6 @@ convertExpression (IR.IRList exprs) = do
   exprs' <- mapM convertExpression exprs
   let arrFun = ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64] True) (AST.Name "list")
   IRB.call arrFun $ (ConstantOperand $ C.Int 64 (toInteger $ length exprs), []) : map (,[]) exprs'
-convertExpression (IR.IRBinary op _ _) = error $ "Should not encounter " ++ op ++ " operator in IR."
 convertExpression (IR.IRTernary cond t f) = do
   then' <- IRB.freshName "then"
   else' <- IRB.freshName "else"
@@ -371,7 +358,7 @@ convertExpression (IR.IRIn expr field) = do
   IRB.call (ConstantOperand $ C.GlobalReference (AST.ptr $ AST.FunctionType AST.i64 [AST.i64, AST.ptr AST.i8] False) (AST.Name "in")) [(expr', []), (e', [])]
 convertExpression (IR.IRInternDict fields) = do
   let type' = lookup (-1) fields
-  case type' of 
+  case type' of
     Just (IR.IRLiteral (L.String value)) -> do
       let fields' = map snd $ sortBy (comparing fst) $ filter ((/= -1) . fst) fields
       fields'' <- mapM convertExpression fields'
