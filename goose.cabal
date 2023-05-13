@@ -116,6 +116,8 @@ library
 
         Language.Goose.LLVM.BuildLibrary
         Language.Goose.LLVM.Compiler
+            Language.Goose.LLVM.Modules.Constant
+            Language.Goose.LLVM.Modules.Monad
             
 
     -- Modules included in this library but not exported.
