@@ -6,6 +6,9 @@ Here you can find the newest list of things that need to be done in order to mak
 - [ ] Add a truly CLI experience
 - [ ] Add a REPL 
 - [ ] Maybe adding a trait system as Rust's one
+- [ ] Add a way to add custom syntax to the language
+- [ ] Add a truly macro system
+- [ ] Add an inlining system
 
 ### 🚧 In Progress
 
