@@ -41,22 +41,6 @@ VALUE eq(VALUE a, VALUE b) {
     }
 
     return boolean(1);
-  } else if (type_a == TYPE_DICT && type_b == TYPE_DICT) {
-    Dict a_dict = decode_pointer(a)->as_dict;
-    Dict b_dict = decode_pointer(b)->as_dict;
-
-    if (a_dict.length != b_dict.length) {
-      return boolean(0);
-    }
-
-    for (int i = 0; i < a_dict.length; i++) {
-      int boo = !eq(a_dict.values[i], b_dict.values[i]);
-      if (boo) {
-        return boolean(0);
-      }
-    }
-
-    return boolean(1);
   } else {
     return boolean(0);
   }

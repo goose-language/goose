@@ -9,8 +9,4 @@ VALUE gt(VALUE a, VALUE b);
 VALUE lte(VALUE a, VALUE b);
 VALUE gte(VALUE a, VALUE b);
 
-// Logical operators
-VALUE and_(VALUE a, VALUE b);
-VALUE or_(VALUE a, VALUE b);
-
 #endif

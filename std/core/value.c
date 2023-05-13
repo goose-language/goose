@@ -3,6 +3,8 @@
 #include "value.h"
 #include <string.h>
 
+#define LOAD_FACTOR 1.25
+
 #include "conversion.h"
 
 #include "io.h"
@@ -46,24 +48,53 @@ VALUE list(int count, ...) {
   return create_pointer(ptr);
 }
 
+uint32_t hash(const char* str, int CAPACITY) {
+  unsigned long i = 0;
+  for (int j = 0; str[j]; j++)
+      i += str[j];
+
+  return i % CAPACITY;
+}
+
+void insert(struct Entry* node, const char* key, VALUE value) {
+  struct Entry *current = node;
+  int i = 0;
+  while (current->next != NULL) {
+    current = current->next;
+    i++;
+  }
+
+  current->key = key;
+  current->value = value;
+  current->next = (struct Entry*) malloc(sizeof(struct Entry));
+  current->next->next = NULL;
+}
+
 VALUE structure(int length, ...) {
   HeapValue* dict = (HeapValue*) malloc(sizeof(HeapValue));
   dict->type = TYPE_DICT;
-  dict->as_dict.length = length;
 
-  dict->as_dict.keys = malloc(sizeof(char*) * length);
-  dict->as_dict.values = malloc(sizeof(VALUE) * length);
+  int size = 4;
+  dict->as_dict.length = size;
+  dict->as_dict.count = length;
 
   va_list args;
   va_start(args, length);
 
+  dict->as_dict.entries = (struct Entry*) malloc(sizeof(struct Entry) * size);
+  struct Entry* entries = dict->as_dict.entries;
+
   for (int i = 0; i < length; i++) {
-    dict->as_dict.keys[i] = va_arg(args, char*);
-    dict->as_dict.values[i] = va_arg(args, VALUE);
+    const char* key = va_arg(args, const char*);
+    VALUE value = va_arg(args, VALUE);
+
+    uint32_t index = hash(key, size);
+
+    insert(&entries[index], key, value);
   }
 
   va_end(args);
-
+  
   return create_pointer(dict);
 }
 

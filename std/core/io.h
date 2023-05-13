@@ -14,7 +14,6 @@ VALUE IO_readFile(VALUE path);
 VALUE IO_input(VALUE prompt);
 VALUE IO_writeFile(VALUE args);
 
-HeapValue* getVariantArguments(VALUE args);
-int hasProperty(VALUE value, char* key);
+struct Entry* getElements(Dict dict);
 
 #endif

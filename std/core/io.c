@@ -13,13 +13,20 @@
 #include "type.h"
 #include "value.h"
 
-VALUE get(Dict dict, char* key) {
+struct Entry* getElements(Dict dict) {
+  struct Entry *result = malloc(sizeof(struct Entry) * dict.count);
+  int j = 0;
   for (int i = 0; i < dict.length; i++) {
-    if (strcmp(dict.keys[i], key) == 0) {
-      return dict.values[i];
+    if (dict.entries[i].key == NULL) continue;
+    result[j] = dict.entries[i];
+    j++;
+    while (dict.entries[i].next != NULL) {
+      result[j] = *dict.entries[i].next;
+      j++;
+      dict.entries[i].next = dict.entries[i].next->next;
     }
   }
-  return unit();
+  return result;
 }
 
 VALUE IO_fileExists (VALUE filename) {
@@ -47,32 +54,6 @@ VALUE IO_readDirectory(VALUE args) {
   return result;
 }
 
-HeapValue* getVariantArguments(VALUE dict) {
-  Dict heap = decode_pointer(dict)->as_dict;
-  VALUE* data = malloc(sizeof(VALUE) * heap.length);
-  int j = 0; 
-  for (int i = 0; i < heap.length; i++) {
-    if (strcmp(heap.keys[i], "$$enum") == 0) continue;
-    if (strcmp(heap.keys[i], "type") == 0) continue;
-
-    data[j] = heap.values[i];
-    j++;
-  }
-
-  HeapValue* result = malloc(sizeof(HeapValue));
-  result->type = TYPE_ARRAY;
-  result->as_array.length = heap.length - 2;
-  result->as_array.data = data;
-  return result;
-}
-
-int hasProperty(VALUE dict, char* key) {
-  Dict heap = decode_pointer(dict)->as_dict;
-  for (int i = 0; i < heap.length; i++) {
-    if (strcmp(heap.keys[i], key) == 0) return 1;
-  }
-  return 0;
-}
 
 VALUE IO_print(VALUE args) {
   VALUE v = index_(args, 1);
@@ -127,10 +108,12 @@ VALUE IO_print(VALUE args) {
       printf("{");
       if (dict.length > 0) {
         printf(" ");
-        for (int i = 0; i < dict.length; i++) {
-          printf("%s: ", dict.keys[i]);
-          IO_print(list(2, unit(), dict.values[i]));
-          if (i != dict.length - 1) printf(", ");
+        struct Entry* e = getElements(dict);
+        for (int i = 0; i < dict.count; i++) {
+          printf("%s", e[i].key);
+          printf(": ");
+          IO_print(list(2, unit(), e[i].value));
+          if (i != dict.count - 1) printf(", ");
         }
         printf(" ");
       }

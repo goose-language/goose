@@ -56,21 +56,14 @@ void update_index(VALUE array, int index, VALUE value) {
 void update_property(VALUE dict, char* property, VALUE value) {
   HeapValue* array = decode_pointer(dict);
 
-  int index = -1;
-  for (int i = 0; i < array->as_dict.length; i++) {
-    if (strcmp(array->as_dict.keys[i], property) == 0) {
-      index = i;
-      break;
+  int i = hash(property, array->as_dict.length);
+
+  struct Entry entry = array->as_dict.entries[i];
+  while (entry.next != NULL) {
+    if (strcmp(array->as_dict.entries[i].key, property) == 0) {
+      array->as_dict.entries[i].value = value;
+      return;
     }
+    entry = *array->as_dict.entries[i].next;
   }
-
-  if (index == -1) {
-    array->as_dict.keys = realloc(array->as_dict.keys, sizeof(char*) * (array->as_dict.length + 1));
-    array->as_dict.values = realloc(array->as_dict.values, sizeof(VALUE) * (array->as_dict.length + 1));
-    array->as_dict.length++;
-    index = array->as_dict.length - 1;
-  }
-
-  array->as_dict.keys[index] = property;
-  array->as_dict.values[index] = value;
 }

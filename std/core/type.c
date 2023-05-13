@@ -97,33 +97,40 @@ char* toString_(VALUE value, int depth) {
     case TYPE_DICT: {
       Dict dict = decode_pointer(value)->as_dict;
       char* result = malloc(sizeof(char) * 2);
-      if (hasProperty(value, "$$enum")) {
-        strcat(result, decode_string(property_(value, "type")));
-        strcat(result, "(");
-        Array list_ = getVariantArguments(value)->as_array;
-        for (int i = 0; i < list_.length; i++) {
-          strcat(result, toString_(list_.data[i], depth + 1));
-          if (i != list_.length - 1) strcat(result, ",");
-        }
-        strcat(result, ")");
-        return result;
-      } else if (dict.length == 0) {
+      if (dict.length == 0) {
         result[0] = '{';
         result[1] = '}';
         return result;
       }
       strcat(result, "{ ");
-      for (int i = 0; i < dict.length; i++) {
-        strcat(result, dict.keys[i]);
+      struct Entry* entries = getElements(dict);
+      for (int i = 0; i < dict.count; i++) {
+        strcat(result, entries[i].key);
         strcat(result, ": ");
-        strcat(result, toString_(dict.values[i], depth + 1));
-        if (i != dict.length - 1) {
+        strcat(result, toString_(entries[i].value, depth + 1));
+        if (i != dict.count - 1) {
           strcat(result, ", ");
         }
       }
       strcat(result, " }");
       return result;
     }
+
+    case TYPE_INTERN: {
+      char* result = malloc(sizeof(char) * 100);
+      Intern intern = decode_pointer(value)->as_intern;
+      strcat(result, intern.name);
+      strcat(result, "(");
+      for (int i = 0; i < intern.length; i++) {
+        strcat(result, toString_(intern.data[i], depth + 1));
+        if (i != intern.length - 1) {
+          strcat(result, ", ");
+        }
+      }
+      strcat(result, ")");
+      return result;
+    }
+
     case TYPE_NULL: {
       char* result = malloc(sizeof(char) * 4);
       strcpy(result, "nil");

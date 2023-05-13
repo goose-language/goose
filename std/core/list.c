@@ -41,10 +41,16 @@ VALUE is(VALUE dict, char* type) {
 VALUE in(VALUE dict, char* key) {
   if (get_type(dict) == TYPE_DICT) {
     Dict heap = decode_pointer(dict)->as_dict;
-    for (int i = 0; i < heap.length; i++) {
-      if (strcmp(heap.keys[i], key) == 0) {
+    int i = hash((const char*) key, heap.length);
+    struct Entry entry = heap.entries[i];
+    if (strcmp(entry.key, key) == 0) {
+      return boolean(1);
+    }
+    while (entry.next != NULL) {
+      if (strcmp(entry.key, key) == 0) {
         return boolean(1);
       }
+      entry = *entry.next;
     }
     return boolean(0);
   } else if (get_type(dict) == TYPE_ARRAY) {
@@ -110,10 +116,16 @@ VALUE Array_length(VALUE args) {
 VALUE property_(VALUE dict, char* key) {
   if (get_type(dict) == TYPE_DICT) {
     Dict heap = decode_pointer(dict)->as_dict;
-    for (int i = 0; i < heap.length; i++) {
-      if (strcmp(heap.keys[i], key) == 0) {
-        return heap.values[i];
+    int i = hash((const char*) key, heap.length);
+    struct Entry entry = heap.entries[i];
+    if (strcmp(entry.key, key) == 0) {
+      return entry.value;
+    }
+    while (entry.next != NULL) {
+      if (strcmp(entry.key, key) == 0) {
+        return entry.value;
       }
+      entry = *entry.next;
     }
     throwError("structure has no property named %s in %s", key, toString(dict));
     return unit();
@@ -130,66 +142,24 @@ VALUE Array_has(VALUE args) {
 
   if (get_type(dict) == TYPE_DICT) {
     Dict heap = decode_pointer(dict)->as_dict;
-    for (int i = 0; i < heap.length; i++) {
-      if (strcmp(heap.keys[i], key_str) == 0) {
+    int i = hash((const char*) key_str, heap.length);
+    struct Entry entry = heap.entries[i];
+    if (entry.key == NULL) {
+      return boolean(0);
+    }
+    if (strcmp(entry.key, key_str) == 0) {
+      return boolean(1);
+    }
+    while (entry.next != NULL) {
+      if (strcmp(entry.key, key_str) == 0) {
         return boolean(1);
       }
+      entry = *entry.next;
     }
     return boolean(0);
   } else {
     return boolean(0);
   }
-}
-
-VALUE IO_clone(VALUE args)
-{
-  VALUE item = index_(args, 1);
-  VALUE result;
-
-  switch (get_type(item)) {
-    case TYPE_BOOL:
-    case TYPE_CHAR:
-    case TYPE_FLOAT:
-    case TYPE_INTEGER:
-      result = item;
-      break;
-    case TYPE_ARRAY: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
-      heap->type = TYPE_ARRAY;
-      heap->as_array.length = decode_pointer(item)->as_array.length;
-      heap->as_array.data = malloc(sizeof(VALUE) * heap->as_array.length);
-      for (int i = 0; i < heap->as_array.length; i++) {
-        heap->as_array.data[i] = IO_clone(list(2, unit(), decode_pointer(item)->as_array.data[i]));
-      }
-      return create_pointer(heap);
-    }
-    case TYPE_DICT: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
-      heap->type = TYPE_DICT;
-      HeapValue* item_ = decode_pointer(item);
-      heap->as_dict.length = item_->as_dict.length;
-      heap->as_dict.values = malloc(sizeof(VALUE) * heap->as_dict.length);
-      heap->as_dict.keys = malloc(sizeof(char*) * heap->as_dict.length);
-      for (int i = 0; i < heap->as_dict.length; i++) {
-        heap->as_dict.values[i] = IO_clone(list(2, unit(), item_->as_dict.values[i]));
-        heap->as_dict.keys[i] = malloc(sizeof(char) * strlen(item_->as_dict.keys[i]));
-        strcpy(heap->as_dict.keys[i], item_->as_dict.keys[i]);
-      }
-      return create_pointer(heap);
-    }
-    case TYPE_NULL:
-      result = unit();
-      break;
-    case TYPE_LAMBDA: {
-      HeapValue* heap = malloc(sizeof(HeapValue));
-      heap->type = TYPE_LAMBDA;
-      heap->as_lambda = decode_pointer(item)->as_lambda;
-      return create_pointer(heap);
-    }
-    default: 
-      throwError("IO::clone: cannot clone unknown type, got %s", decode_string(Type_of(list(2, unit(), item))));
-  }
-  return result;
 }
 
 VALUE Array_create(VALUE args) {
@@ -199,7 +169,7 @@ VALUE Array_create(VALUE args) {
   int size_ = decode_integer(size);
   VALUE* data = malloc(sizeof(VALUE) * size_);
   for (int i = 0; i < size_; i++) {
-    data[i] = IO_clone(list(2, unit(), value));
+    data[i] = value;
   }
   HeapValue* heap = malloc(sizeof(HeapValue));
   heap->type = TYPE_ARRAY;

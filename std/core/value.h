@@ -55,11 +55,17 @@ typedef struct {
   uint32_t capacity;
 } Array;
 
+struct Entry {
+  char* key;
+  VALUE value;
+  struct Entry* next;
+};
+
 // Container for dictionaries
 typedef struct {
-  char** keys;
-  VALUE* values;
+  struct Entry* entries;
   uint32_t capacity;
+  uint32_t count;
   uint32_t length;
 } Dict;
 
@@ -100,5 +106,7 @@ VALUE string(char* value);
 VALUE emptyList();
 ValueType get_type(VALUE value);
 VALUE create_pointer(HeapValue* ptr);
+
+uint32_t hash(const char* string, int);
 
 #endif

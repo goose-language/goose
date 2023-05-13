@@ -6,8 +6,6 @@
 #include "conversion.h"
 #include "eq.h"
 
-
-
 VALUE add(VALUE a, VALUE b) {
   ValueType type_a = get_type(a);
   ValueType type_b = get_type(b);
