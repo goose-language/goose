@@ -14,6 +14,7 @@ import qualified Language.Goose.Parser.Modules.Pattern as P
 import qualified Data.Functor as F
 
 import Control.Applicative
+import Control.Monad (guard)
 
 type SourceFile = String
 
@@ -77,8 +78,8 @@ parseTerm = P.choice [
 
 parseLiteral :: Monad m => L.Goose m C.Expression
 parseLiteral = P.choice [
+    P.try $ L.locate $ C.Literal . C.Float <$> L.float,
     L.locate $ C.Literal . C.Int <$> L.integer,
-    L.locate $ C.Literal . C.Float <$> L.float,
     L.locate $ C.Literal . C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
     L.locate $ C.Literal . C.Char <$> L.charLiteral,
     stringLiteral parseExpression,

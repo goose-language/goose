@@ -6,8 +6,8 @@ import qualified Data.Functor as F
 
 parseLiteral :: Monad m => L.Parser m C.Literal
 parseLiteral = P.choice [
+    P.try $ C.Float <$> L.float,
     C.Int <$> L.integer,
-    C.Float <$> L.float,
     C.Bool <$> (L.reserved "true" F.$> True P.<|> L.reserved "false" F.$> False),
     C.Char <$> L.charLiteral,
     C.String <$> L.stringLiteral,
